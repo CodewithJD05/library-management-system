@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_db
 
+from app.routers.books import router as books_router
+
+from app.routers.members import router as members_router
+
+from app.routers.borrowings import router as borrowings_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -13,6 +18,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.include_router(books_router)
+app.include_router(members_router)
+app.include_router(borrowings_router)
 
 @app.get("/")
 def home():
