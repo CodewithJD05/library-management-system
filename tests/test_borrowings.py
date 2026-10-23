@@ -264,3 +264,43 @@ def test_overdue_filter_includes_past_due_unreturned_borrowing(client):
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]["id"] == borrowing_id
+
+
+
+
+
+def test_overdue_count_is_zero_when_no_borrowings_are_overdue(client):
+    response = client.get("/borrowings/overdue/count")
+
+    assert response.status_code == 200
+    assert response.json() == {"overdue_count": 0}
+
+
+def test_overdue_count_includes_past_due_unreturned_borrowing(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    borrow_response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+    assert borrow_response.status_code == 201
+
+    borrowing_id = borrow_response.json()["id"]
+
+    from app.db.session import get_db
+
+    db_dependency = client.app.dependency_overrides[get_db]
+    db = next(db_dependency())
+    try:
+        borrowing = db.get(Borrowing, borrowing_id)
+        borrowing.due_at = datetime.now(timezone.utc) - timedelta(days=1)
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/borrowings/overdue/count")
+
+    assert response.status_code == 200
+    assert response.json() == {"overdue_count": 1}

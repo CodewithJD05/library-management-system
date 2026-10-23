@@ -79,6 +79,27 @@ def borrow_book(
     return borrowing
 
 
+
+
+
+@router.get("/overdue/count")
+def count_overdue_borrowings(db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+
+    query = select(Borrowing.id).where(
+        Borrowing.returned_at.is_(None),
+        Borrowing.due_at < now,
+    )
+
+    overdue_count = len(db.scalars(query).all())
+
+    return {"overdue_count": overdue_count}
+
+
+
+
+
+
 @router.get("/", response_model=list[BorrowingResponse])
 def list_borrowings(
     active_only: bool = False,
