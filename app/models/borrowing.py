@@ -15,8 +15,8 @@ class Borrowing(Base):
         index=True,
     )
 
-    book_id: Mapped[int] = mapped_column(
-        ForeignKey("books.id"),
+    book_copy_id: Mapped[int] = mapped_column(
+        ForeignKey("book_copies.id"),
         nullable=False,
         index=True,
     )

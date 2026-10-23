@@ -5,13 +5,13 @@ from pydantic import BaseModel, ConfigDict
 
 
 class BorrowingCreate(BaseModel):
-    book_id: int
+    book_copy_id: int
     member_id: int
 
 
 class BorrowingResponse(BaseModel):
     id: int
-    book_id: int
+    book_copy_id: int
     member_id: int
     borrowed_at: datetime
     due_at: datetime

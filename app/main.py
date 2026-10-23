@@ -1,4 +1,5 @@
 
+from unittest import skipIf
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -12,6 +13,7 @@ from app.routers.members import router as members_router
 
 from app.routers.borrowings import router as borrowings_router
 
+from app.routers.book_copies import router as book_copies_router
 app = FastAPI(
     title=settings.app_name,
     description="Backend API for managing library operations.",
@@ -21,7 +23,7 @@ app = FastAPI(
 app.include_router(books_router)
 app.include_router(members_router)
 app.include_router(borrowings_router)
-
+app.include_router(book_copies_router)
 @app.get("/")
 def home():
     return {

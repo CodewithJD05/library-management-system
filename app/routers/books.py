@@ -11,9 +11,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from app.models.borrowing import Borrowing
 
+from app.models.book_copy import BookCopy
+
 router = APIRouter(
     prefix="/books",
-    tags=["Books"],
+    tags=["Books"]
 )
 
 
@@ -127,6 +129,7 @@ def update_book(
 
 
 
+
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_book(
     book_id: int,
@@ -140,16 +143,16 @@ def delete_book(
             detail="Book not found",
         )
 
-    borrowing_exists = db.scalar(
-        select(Borrowing.id)
-        .where(Borrowing.book_id == book_id)
+    copy_exists = db.scalar(
+        select(BookCopy.id)
+        .where(BookCopy.book_id == book_id)
         .limit(1)
     )
 
-    if borrowing_exists is not None:
+    if copy_exists is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete a book with borrowing history",
+            detail="Cannot delete a book while physical copies exist",
         )
 
     db.delete(book)

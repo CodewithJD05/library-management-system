@@ -1,18 +1,16 @@
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models import borrowing
-from app.models.book import Book
+from app.models.book_copy import BookCopy
 from app.models.member import Member
 from app.models.borrowing import Borrowing
 from app.schemas.borrowing import BorrowingCreate, BorrowingResponse
-
-from datetime import datetime, timezone
-
-from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/borrowings", tags=["Borrowings"])
 
@@ -26,12 +24,12 @@ def borrow_book(
     borrowing_data: BorrowingCreate,
     db: Session = Depends(get_db),
 ):
-    book = db.get(Book, borrowing_data.book_id)
+    book_copy = db.get(BookCopy, borrowing_data.book_copy_id)
 
-    if book is None:
+    if book_copy is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Book not found",
+            detail="Book copy not found",
         )
 
     member = db.get(Member, borrowing_data.member_id)
@@ -49,20 +47,23 @@ def borrow_book(
         )
 
     active_borrowing = db.scalar(
-        select(Borrowing).where(
-            Borrowing.book_id == borrowing_data.book_id,
+        select(Borrowing.id).where(
+            Borrowing.book_copy_id == book_copy.id,
             Borrowing.returned_at.is_(None),
-        )
+        ).limit(1)
     )
 
-    if active_borrowing:
+    if active_borrowing is not None or book_copy.status != "available":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="This book is already borrowed",
+            detail="This book copy is already borrowed",
         )
 
-    borrowing = Borrowing(**borrowing_data.model_dump())
-
+    borrowing = Borrowing(
+        book_copy_id=book_copy.id,
+        member_id=member.id,
+    )
+    book_copy.status = "borrowed"
     db.add(borrowing)
 
     try:
@@ -72,14 +73,10 @@ def borrow_book(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="This book is already borrowed",
+            detail="This book copy is already borrowed",
         )
 
     return borrowing
-
-
-
-
 
 
 @router.get("/", response_model=list[BorrowingResponse])
@@ -100,18 +97,13 @@ def list_borrowings(
         query = query.where(Borrowing.member_id == member_id)
 
     if book_id is not None:
-        query = query.where(Borrowing.book_id == book_id)
+        query = query.join(
+            BookCopy,
+            Borrowing.book_copy_id == BookCopy.id,
+        ).where(BookCopy.book_id == book_id)
 
-    query = (
-        query
-        .order_by(Borrowing.id.desc())
-        .offset(skip)
-        .limit(limit)
-    )
-
+    query = query.order_by(Borrowing.id.desc()).offset(skip).limit(limit)
     return db.scalars(query).all()
-
-
 
 
 @router.put("/{borrowing_id}/return", response_model=BorrowingResponse)
@@ -133,7 +125,11 @@ def return_book(
             detail="This book has already been returned",
         )
 
+    book_copy = db.get(BookCopy, borrowing.book_copy_id)
     borrowing.returned_at = datetime.now(timezone.utc)
+
+    if book_copy is not None:
+        book_copy.status = "available"
 
     try:
         db.commit()
@@ -141,5 +137,5 @@ def return_book(
     except Exception:
         db.rollback()
         raise
-    
+
     return borrowing
