@@ -375,3 +375,87 @@ def test_cannot_set_due_date_in_the_past(client):
     )
 
     assert response.status_code == 422
+
+
+
+def test_fine_is_zero_before_due_date(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["fine_amount"] == 0
+
+
+def test_overdue_borrowing_has_fine(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+
+    assert response.status_code == 201
+    borrowing_id = response.json()["id"]
+
+    # Make the due date 3 complete days in the past.
+    from app.db.session import get_db
+    from app.models.borrowing import Borrowing
+    from datetime import datetime, timedelta, timezone
+
+    db_dependency = client.app.dependency_overrides[get_db]
+    db = next(db_dependency())
+
+    try:
+        borrowing = db.get(Borrowing, borrowing_id)
+        borrowing.due_at = datetime.now(timezone.utc) - timedelta(days=3, seconds=1)
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/borrowings/")
+
+    assert response.status_code == 200
+    borrowing_data = next(
+        item for item in response.json() if item["id"] == borrowing_id
+    )
+    assert borrowing_data["fine_amount"] == 30
+
+
+def test_returned_borrowing_fine_stops_at_return_time(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+
+    assert response.status_code == 201
+    borrowing_id = response.json()["id"]
+
+    from app.db.session import get_db
+    from app.models.borrowing import Borrowing
+    from datetime import datetime, timedelta, timezone
+
+    db_dependency = client.app.dependency_overrides[get_db]
+    db = next(db_dependency())
+
+    try:
+        borrowing = db.get(Borrowing, borrowing_id)
+        borrowing.due_at = datetime.now(timezone.utc) - timedelta(days=3, seconds=1)
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.put(f"/borrowings/{borrowing_id}/return")
+    assert response.status_code == 200
+    assert response.json()["fine_amount"] == 30
