@@ -16,7 +16,9 @@ from app.schemas.borrowing import (
     BorrowingDueDateUpdate
 )
 
-from app.utils.fine_calculator import calculate_fine
+from app.utils.fine_calculator import calculate_fine, DAILY_FINE_RATE
+
+from app.models.fine import Fine
 
 router = APIRouter(prefix="/borrowings", tags=["Borrowings"])
 
@@ -208,29 +210,45 @@ def list_borrowings(
 
 
 @router.put("/{borrowing_id}/return", response_model=BorrowingResponse)
-def return_book(
-    borrowing_id: int,
-    db: Session = Depends(get_db),
-):
+def return_book(borrowing_id: int, db: Session = Depends(get_db)):
     borrowing = db.get(Borrowing, borrowing_id)
 
     if borrowing is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail="Borrowing record not found",
         )
 
     if borrowing.returned_at is not None:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=409,
             detail="This book has already been returned",
         )
 
     book_copy = db.get(BookCopy, borrowing.book_copy_id)
-    borrowing.returned_at = datetime.now(timezone.utc)
+
+    return_time = datetime.now(timezone.utc)
+    borrowing.returned_at = return_time
 
     if book_copy is not None:
         book_copy.status = "available"
+
+    fine_amount = calculate_fine(borrowing.due_at, return_time)
+
+    if fine_amount > 0:
+        existing_fine = db.scalar(
+            select(Fine).where(Fine.borrowing_id == borrowing.id)
+        )
+
+        if existing_fine is None:
+            fine = Fine(
+                borrowing_id=borrowing.id,
+                amount=fine_amount,
+                daily_rate=DAILY_FINE_RATE,
+                status="unpaid",
+                assessed_at=return_time,
+            )
+            db.add(fine)
 
     try:
         db.commit()

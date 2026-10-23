@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from app.models.borrowing import Borrowing
-
+from app.models.fine import Fine
 
 def create_test_book(client):
     response = client.post(
@@ -459,3 +459,93 @@ def test_returned_borrowing_fine_stops_at_return_time(client):
     response = client.put(f"/borrowings/{borrowing_id}/return")
     assert response.status_code == 200
     assert response.json()["fine_amount"] == 30
+
+
+
+
+def test_late_return_creates_fine_record(client):
+    from app.db.session import get_db
+
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    borrow_response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+    assert borrow_response.status_code == 201
+
+    borrowing_id = borrow_response.json()["id"]
+
+    # Make the due date three complete days in the past.
+    db_dependency = client.app.dependency_overrides[get_db]
+    db = next(db_dependency())
+    try:
+        borrowing = db.get(Borrowing, borrowing_id)
+        borrowing.due_at = datetime.now(timezone.utc) - timedelta(
+            days=3, seconds=1
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    # Return the overdue book.
+    return_response = client.put(
+        f"/borrowings/{borrowing_id}/return"
+    )
+    assert return_response.status_code == 200
+    assert return_response.json()["fine_amount"] == 30
+
+    # Verify the permanent fine record in the database.
+    db = next(db_dependency())
+    try:
+        fine = (
+            db.query(Fine)
+            .filter(Fine.borrowing_id == borrowing_id)
+            .first()
+        )
+
+        assert fine is not None
+        assert float(fine.amount) == 30.00
+        assert float(fine.daily_rate) == 10.00
+        assert fine.status == "unpaid"
+        assert fine.assessed_at is not None
+    finally:
+        db.close()
+
+
+def test_on_time_return_does_not_create_fine_record(client):
+    from app.db.session import get_db
+
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    borrow_response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+    assert borrow_response.status_code == 201
+
+    borrowing_id = borrow_response.json()["id"]
+
+    # The default due date is 15 days in the future.
+    return_response = client.put(
+        f"/borrowings/{borrowing_id}/return"
+    )
+    assert return_response.status_code == 200
+    assert return_response.json()["fine_amount"] == 0
+
+    db_dependency = client.app.dependency_overrides[get_db]
+    db = next(db_dependency())
+    try:
+        fine = (
+            db.query(Fine)
+            .filter(Fine.borrowing_id == borrowing_id)
+            .first()
+        )
+
+        assert fine is None
+    finally:
+        db.close()
