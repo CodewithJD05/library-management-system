@@ -16,26 +16,11 @@ from app.schemas.borrowing import (
     BorrowingDueDateUpdate
 )
 
+from app.utils.fine_calculator import calculate_fine
 
 router = APIRouter(prefix="/borrowings", tags=["Borrowings"])
 
-def calculate_fine(due_at: datetime, end_at: datetime) -> int:
-    """Calculate the fine in rupees for complete overdue days."""
-    if due_at.tzinfo is None or due_at.utcoffset() is None:
-        due_at = due_at.replace(tzinfo=timezone.utc)
 
-    if end_at.tzinfo is None or end_at.utcoffset() is None:
-        end_at = end_at.replace(tzinfo=timezone.utc)
-
-    overdue_seconds = (end_at - due_at).total_seconds()
-
-    if overdue_seconds <= 0:
-        return 0
-
-    overdue_days = int(overdue_seconds // 86400)
-    daily_fine = 10
-
-    return overdue_days * daily_fine
 
 
 @router.post(
