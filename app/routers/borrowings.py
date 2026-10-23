@@ -82,6 +82,7 @@ def borrow_book(
 @router.get("/", response_model=list[BorrowingResponse])
 def list_borrowings(
     active_only: bool = False,
+    overdue_only: bool = False,
     member_id: int | None = Query(default=None, ge=1),
     book_id: int | None = Query(default=None, ge=1),
     skip: int = Query(default=0, ge=0),
@@ -93,6 +94,12 @@ def list_borrowings(
     if active_only:
         query = query.where(Borrowing.returned_at.is_(None))
 
+    if overdue_only:
+        now = datetime.now(timezone.utc)
+        query = query.where(
+            Borrowing.returned_at.is_(None),
+            Borrowing.due_at < now,
+        )
     if member_id is not None:
         query = query.where(Borrowing.member_id == member_id)
 

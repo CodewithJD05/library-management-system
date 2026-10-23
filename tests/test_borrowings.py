@@ -210,3 +210,57 @@ def test_duplicate_copy_barcode_is_rejected(client):
     )
 
     assert response.status_code == 409
+
+
+from datetime import datetime, timedelta, timezone
+
+from app.models.borrowing import Borrowing
+
+
+def test_overdue_filter_excludes_borrowed_books_not_yet_due(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    borrow_response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+    assert borrow_response.status_code == 201
+
+    response = client.get("/borrowings/?overdue_only=true")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_overdue_filter_includes_past_due_unreturned_borrowing(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    borrow_response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+    assert borrow_response.status_code == 201
+
+    borrowing_id = borrow_response.json()["id"]
+
+    # Set the due date in the past for this test.
+    from app.db.session import get_db
+
+    db_dependency = client.app.dependency_overrides[get_db]
+    db = next(db_dependency())
+    try:
+        borrowing = db.get(Borrowing, borrowing_id)
+        borrowing.due_at = datetime.now(timezone.utc) - timedelta(days=1)
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/borrowings/?overdue_only=true")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["id"] == borrowing_id
