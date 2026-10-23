@@ -10,7 +10,12 @@ from app.db.session import get_db
 from app.models.book_copy import BookCopy
 from app.models.member import Member
 from app.models.borrowing import Borrowing
-from app.schemas.borrowing import BorrowingCreate, BorrowingResponse
+from app.schemas.borrowing import (
+    BorrowingCreate,
+    BorrowingResponse,
+    BorrowingDueDateUpdate
+)
+
 
 router = APIRouter(prefix="/borrowings", tags=["Borrowings"])
 
@@ -96,6 +101,71 @@ def count_overdue_borrowings(db: Session = Depends(get_db)):
     return {"overdue_count": overdue_count}
 
 
+
+
+
+@router.patch("/{borrowing_id}/due-date", response_model=BorrowingResponse)
+def extend_due_date(
+    borrowing_id: int,
+    due_date_data: BorrowingDueDateUpdate,
+    db: Session = Depends(get_db),
+):
+    borrowing = db.get(Borrowing, borrowing_id)
+
+    if borrowing is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Borrowing record not found",
+        )
+
+    if borrowing.returned_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot extend the due date of a returned borrowing",
+        )
+
+    new_due_at = due_date_data.due_at
+
+    if new_due_at.tzinfo is None or new_due_at.utcoffset() is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="The due date must include a timezone",
+        )
+
+    new_due_at = new_due_at.astimezone(timezone.utc)
+
+    if new_due_at <= datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="The new due date must be in the future",
+        )
+
+    
+    current_due_at = borrowing.due_at
+
+    # SQLite may return a datetime without timezone information.
+    if current_due_at.tzinfo is None or current_due_at.utcoffset() is None:
+        current_due_at = current_due_at.replace(tzinfo=timezone.utc)
+    else:
+        current_due_at = current_due_at.astimezone(timezone.utc)
+
+    if new_due_at <= current_due_at:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="The new due date must be later than the current due date",
+        )
+
+
+    borrowing.due_at = new_due_at
+
+    try:
+        db.commit()
+        db.refresh(borrowing)
+    except Exception:
+        db.rollback()
+        raise
+
+    return borrowing
 
 
 

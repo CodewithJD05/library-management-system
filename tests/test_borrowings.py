@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta, timezone
+from app.models.borrowing import Borrowing
+
 
 def create_test_book(client):
     response = client.post(
@@ -212,9 +215,6 @@ def test_duplicate_copy_barcode_is_rejected(client):
     assert response.status_code == 409
 
 
-from datetime import datetime, timedelta, timezone
-
-from app.models.borrowing import Borrowing
 
 
 def test_overdue_filter_excludes_borrowed_books_not_yet_due(client):
@@ -304,3 +304,74 @@ def test_overdue_count_includes_past_due_unreturned_borrowing(client):
 
     assert response.status_code == 200
     assert response.json() == {"overdue_count": 1}
+
+
+
+def test_extend_borrowing_due_date(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    borrow_response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+    assert borrow_response.status_code == 201
+
+    borrowing_id = borrow_response.json()["id"]
+    new_due_at = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+
+    response = client.patch(
+        f"/borrowings/{borrowing_id}/due-date",
+        json={"due_at": new_due_at},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["due_at"] is not None
+
+
+def test_cannot_extend_returned_borrowing(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    borrow_response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+    assert borrow_response.status_code == 201
+
+    borrowing_id = borrow_response.json()["id"]
+    return_response = client.put(f"/borrowings/{borrowing_id}/return")
+    assert return_response.status_code == 200
+
+    new_due_at = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+
+    response = client.patch(
+        f"/borrowings/{borrowing_id}/due-date",
+        json={"due_at": new_due_at},
+    )
+
+    assert response.status_code == 409
+
+
+def test_cannot_set_due_date_in_the_past(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    borrow_response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+    assert borrow_response.status_code == 201
+
+    borrowing_id = borrow_response.json()["id"]
+    past_due_at = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+
+    response = client.patch(
+        f"/borrowings/{borrowing_id}/due-date",
+        json={"due_at": past_due_at},
+    )
+
+    assert response.status_code == 422
