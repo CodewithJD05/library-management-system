@@ -48,3 +48,56 @@ def test_missing_member_returns_404(client):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Member not found"
+
+
+
+def test_deactivate_member(client):
+    member_response = client.post(
+        "/members/",
+        json={
+            "full_name": "Test Member",
+            "email": "deactivate@example.com",
+        },
+    )
+    member_id = member_response.json()["id"]
+
+    response = client.patch(
+        f"/members/{member_id}/status",
+        json={"is_active": False},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["is_active"] is False
+
+
+def test_reactivate_member(client):
+    member_response = client.post(
+        "/members/",
+        json={
+            "full_name": "Test Member",
+            "email": "reactivate@example.com",
+        },
+    )
+    member_id = member_response.json()["id"]
+
+    client.patch(
+        f"/members/{member_id}/status",
+        json={"is_active": False},
+    )
+
+    response = client.patch(
+        f"/members/{member_id}/status",
+        json={"is_active": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["is_active"] is True
+
+
+def test_update_status_for_missing_member_returns_404(client):
+    response = client.patch(
+        "/members/99999/status",
+        json={"is_active": False},
+    )
+
+    assert response.status_code == 404

@@ -6,9 +6,23 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.member import Member
-from app.schemas.member import MemberCreate, MemberResponse, MemberUpdate
+from app.schemas.member import (
+    MemberCreate,
+    MemberResponse,
+    MemberUpdate,
+    MemberStatusUpdate
+)
 
 from app.models.borrowing import Borrowing
+
+from app.schemas.borrowing import BorrowingResponse
+
+
+from pydantic import BaseModel
+
+class MemberStatusUpdate(BaseModel):
+    is_active: bool
+
 
 router = APIRouter(prefix="/members", tags=["Members"])
 
@@ -64,6 +78,37 @@ def list_members(
     return db.scalars(query).all()
 
 
+# Get a member's borrowing history
+@router.get(
+    "/{member_id}/borrowings",
+    response_model=list[BorrowingResponse],
+)
+def get_member_borrowing_history(
+    member_id: int,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    # Check whether the member exists
+    member = db.get(Member, member_id)
+
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        )
+
+    # Get this member's borrowing records
+    query = (
+        select(Borrowing)
+        .where(Borrowing.member_id == member_id)
+        .order_by(Borrowing.id.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+
+    return db.scalars(query).all()
+
 # Get a member by ID
 @router.get("/{member_id}", response_model=MemberResponse)
 def get_member(
@@ -118,6 +163,30 @@ def update_member(
         )
 
     return member
+
+
+# Activate or deactivate a member
+@router.patch("/{member_id}/status", response_model=MemberResponse)
+def update_member_status(
+    member_id: int,
+    status_data: MemberStatusUpdate,
+    db: Session = Depends(get_db),
+):
+    member = db.get(Member, member_id)
+
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        )
+
+    member.is_active = status_data.is_active
+
+    db.commit()
+    db.refresh(member)
+
+    return member
+
 
 
 # Delete a member
