@@ -1,22 +1,34 @@
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.book import Book
+from app.models.book_copy import BookCopy
+from app.models.borrowing import Borrowing
+from app.models.staff_user import StaffUser
+from app.routers.auth import get_current_staff_user
 from app.schemas.book import BookCreate, BookResponse, BookUpdate
 
-from sqlalchemy.exc import IntegrityError
-
-from sqlalchemy import select
-from app.models.borrowing import Borrowing
-
-from app.models.book_copy import BookCopy
 
 router = APIRouter(
     prefix="/books",
-    tags=["Books"]
+    tags=["Books"],
 )
+
+CurrentStaff = Annotated[
+    StaffUser,
+    Depends(get_current_staff_user),
+]
+
+DatabaseSession = Annotated[
+    Session,
+    Depends(get_db),
+]
 
 
 @router.post(
@@ -26,12 +38,11 @@ router = APIRouter(
 )
 def create_book(
     book_data: BookCreate,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
-    existing_book = (
-        db.query(Book)
-        .filter(Book.isbn == book_data.isbn)
-        .first()
+    existing_book = db.scalar(
+        select(Book).where(Book.isbn == book_data.isbn)
     )
 
     if existing_book:
@@ -51,34 +62,32 @@ def create_book(
 
 @router.get("/", response_model=list[BookResponse])
 def list_books(
+    db: DatabaseSession,
+    current_user: CurrentStaff,
     search: str | None = None,
     published_year: int | None = None,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
-    db: Session = Depends(get_db),
 ):
-    query = db.query(Book)
+    statement = select(Book)
 
     if search:
-        query = query.filter(Book.title.ilike(f"%{search}%"))
+        statement = statement.where(Book.title.ilike(f"%{search}%"))
 
     if published_year is not None:
-        query = query.filter(Book.published_year == published_year)
+        statement = statement.where(Book.published_year == published_year)
 
-    books = (
-        query.order_by(Book.id)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    statement = statement.order_by(Book.id).offset(skip).limit(limit)
 
-    return books
-
-
+    return db.scalars(statement).all()
 
 
 @router.get("/{book_id}", response_model=BookResponse)
-def get_book(book_id: int, db: Session = Depends(get_db)):
+def get_book(
+    book_id: int,
+    db: DatabaseSession,
+    current_user: CurrentStaff,
+):
     book = db.get(Book, book_id)
 
     if book is None:
@@ -94,7 +103,8 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
 def update_book(
     book_id: int,
     book_data: BookUpdate,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     book = db.get(Book, book_id)
 
@@ -121,19 +131,21 @@ def update_book(
     except IntegrityError:
         db.rollback()
         raise HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail="A book with this ISBN already exists",
-    )
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A book with this ISBN already exists",
+        ) from None
 
     return book
 
 
-
-
-@router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{book_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_book(
     book_id: int,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     book = db.get(Book, book_id)
 

@@ -1,4 +1,6 @@
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -8,13 +10,20 @@ from app.models.book import Book
 from app.models.book_copy import BookCopy
 from app.models.member import Member
 from app.models.borrowing import Borrowing
+from app.routers.auth import get_current_staff_user
 
+from app.models.staff_user import StaffUser
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 
 @router.get("/summary")
-def get_dashboard_summary(db: Session = Depends(get_db)):
+def get_dashboard_summary(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[
+        StaffUser, Depends(get_current_staff_user)
+    ],
+):
     total_books = db.scalar(
         select(func.count(Book.id))
     ) or 0

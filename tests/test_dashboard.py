@@ -1,5 +1,6 @@
 
-def test_dashboard_summary_with_empty_database(client):
+def test_dashboard_summary_with_empty_database(authenticated_client):
+    client = authenticated_client
     response = client.get("/dashboard/summary")
 
     assert response.status_code == 200
@@ -15,7 +16,8 @@ def test_dashboard_summary_with_empty_database(client):
     }
 
 
-def test_dashboard_summary_counts_books_and_members(client):
+def test_dashboard_summary_counts_books_and_members(authenticated_client):
+    client = authenticated_client
     from tests.test_borrowings import (
         create_test_book,
         create_test_member,
@@ -46,7 +48,8 @@ def test_dashboard_summary_counts_books_and_members(client):
 
 
 
-def test_dashboard_updates_after_borrow_and_return(client):
+def test_dashboard_updates_after_borrow_and_return(authenticated_client):
+    client = authenticated_client
     from tests.test_borrowings import (
         create_test_book,
         create_test_member,
@@ -99,3 +102,10 @@ def test_dashboard_updates_after_borrow_and_return(client):
     assert response.json()["available_copies"] == 1
     assert response.json()["borrowed_copies"] == 0
     assert response.json()["active_loans"] == 0
+
+
+
+def test_dashboard_requires_authentication(client):
+    response = client.get("/dashboard/summary")
+
+    assert response.status_code == 401

@@ -1,31 +1,45 @@
 
-from fastapi import APIRouter, Depends, Query,  HTTPException
-from sqlalchemy import select, case, func
+from datetime import datetime, timezone
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.borrowing import Borrowing
 from app.models.fine import Fine
+from app.models.staff_user import StaffUser
+from app.routers.auth import get_current_staff_user
 from app.schemas.fine import FineResponse
 
-from datetime import datetime, timezone
-
-from app.models.borrowing import Borrowing
 
 router = APIRouter(
     prefix="/fines",
     tags=["Fines"],
 )
 
-#  ALL FINES
+CurrentStaff = Annotated[
+    StaffUser,
+    Depends(get_current_staff_user),
+]
 
+DatabaseSession = Annotated[
+    Session,
+    Depends(get_db),
+]
+
+
+# ALL FINES
 
 @router.get("/", response_model=list[FineResponse])
 def get_fines(
+    db: DatabaseSession,
+    current_user: CurrentStaff,
     unpaid_only: bool = Query(default=False),
     member_id: int | None = Query(default=None, ge=1),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
-    db: Session = Depends(get_db),
 ):
     statement = select(Fine)
 
@@ -44,12 +58,14 @@ def get_fines(
 
     return db.scalars(statement).all()
 
-#  PAY FINE
+
+# PAY FINE
 
 @router.put("/{fine_id}/pay", response_model=FineResponse)
 def pay_fine(
     fine_id: int,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     fine = db.get(Fine, fine_id)
 
@@ -78,17 +94,27 @@ def pay_fine(
     return fine
 
 
+# FINE SUMMARY
+
 @router.get("/summary")
-def get_fine_summary(db: Session = Depends(get_db)):
+def get_fine_summary(
+    db: DatabaseSession,
+    current_user: CurrentStaff,
+):
     statement = select(
         func.count(Fine.id).label("total_fines"),
         func.coalesce(
-            func.sum(case((Fine.status == "unpaid", 1), else_=0)), 0
+            func.sum(case((Fine.status == "unpaid", 1), else_=0)),
+            0,
         ).label("unpaid_fines"),
         func.coalesce(
-            func.sum(case((Fine.status == "paid", 1), else_=0)), 0
+            func.sum(case((Fine.status == "paid", 1), else_=0)),
+            0,
         ).label("paid_fines"),
-        func.coalesce(func.sum(Fine.amount), 0).label("total_amount"),
+        func.coalesce(
+            func.sum(Fine.amount),
+            0,
+        ).label("total_amount"),
         func.coalesce(
             func.sum(
                 case(

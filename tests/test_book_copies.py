@@ -1,3 +1,10 @@
+import pytest
+
+
+@pytest.fixture()
+def client(authenticated_client):
+    return authenticated_client
+
 
 def create_test_book(client):
     response = client.post(
@@ -88,3 +95,26 @@ def test_copy_barcode_is_required(client):
     )
 
     assert response.status_code == 422
+
+
+def test_copy_barcode_rejects_whitespace_only(client):
+    book_id = create_test_book(client)
+
+    response = client.post(
+        f"/books/{book_id}/copies",
+        json={"barcode": "   "},
+    )
+
+    assert response.status_code == 422
+
+
+def test_copy_barcode_is_trimmed(client):
+    book_id = create_test_book(client)
+
+    response = client.post(
+        f"/books/{book_id}/copies",
+        json={"barcode": "  COPY-TRIM-001  "},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["barcode"] == "COPY-TRIM-001"

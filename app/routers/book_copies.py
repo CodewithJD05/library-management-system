@@ -1,4 +1,6 @@
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -7,9 +9,23 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.book import Book
 from app.models.book_copy import BookCopy
+from app.models.staff_user import StaffUser
+from app.routers.auth import get_current_staff_user
 from app.schemas.book_copy import BookCopyCreate, BookCopyResponse
 
+
 router = APIRouter(prefix="/books", tags=["Book Copies"])
+
+
+CurrentStaff = Annotated[
+    StaffUser,
+    Depends(get_current_staff_user),
+]
+
+DatabaseSession = Annotated[
+    Session,
+    Depends(get_db),
+]
 
 
 @router.post(
@@ -20,7 +36,8 @@ router = APIRouter(prefix="/books", tags=["Book Copies"])
 def create_book_copy(
     book_id: int,
     copy_data: BookCopyCreate,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     book = db.get(Book, book_id)
 
@@ -35,6 +52,7 @@ def create_book_copy(
         barcode=copy_data.barcode,
         status="available",
     )
+
     db.add(book_copy)
 
     try:
@@ -45,7 +63,7 @@ def create_book_copy(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A book copy with this barcode already exists",
-        )
+        ) from None
 
     return book_copy
 
@@ -56,7 +74,8 @@ def create_book_copy(
 )
 def list_book_copies(
     book_id: int,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     book = db.get(Book, book_id)
 
@@ -71,4 +90,5 @@ def list_book_copies(
         .where(BookCopy.book_id == book_id)
         .order_by(BookCopy.id)
     )
+
     return db.scalars(query).all()

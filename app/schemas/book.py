@@ -1,8 +1,21 @@
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 
 class BookCreate(BaseModel):
+    @field_validator("title", "isbn")
+    @classmethod
+    def strip_required_strings(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be empty")
+        return value
     title: str = Field(min_length=1, max_length=200)
     isbn: str = Field(min_length=1, max_length=20)
     description: str | None = None
@@ -22,6 +35,16 @@ class BookResponse(BaseModel):
 
 
 class BookUpdate(BaseModel):
+    @field_validator("title", "isbn")
+    @classmethod
+    def strip_optional_strings(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be empty")
+        return value
     title: str | None = Field(default=None, min_length=1, max_length=200)
     isbn: str | None = Field(default=None, min_length=1, max_length=20)
     description: str | None = None

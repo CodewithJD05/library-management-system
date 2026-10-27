@@ -2,7 +2,12 @@ from datetime import datetime, timedelta, timezone
 from app.models.borrowing import Borrowing
 from app.models.fine import Fine
 
+import pytest
 
+
+@pytest.fixture()
+def client(authenticated_client):
+    return authenticated_client
 
 def create_test_book(client):
     response = client.post(
@@ -996,3 +1001,25 @@ def test_member_borrowing_history_supports_pagination(client):
 
     assert response.status_code == 200
     assert len(response.json()) == 1
+
+
+def test_cannot_return_borrowing_twice(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    borrow_response = client.post(
+        "/borrowings/",
+        json={"book_copy_id": copy_id, "member_id": member_id},
+    )
+    borrowing_id = borrow_response.json()["id"]
+
+    first_return = client.put(
+        f"/borrowings/{borrowing_id}/return"
+    )
+    second_return = client.put(
+        f"/borrowings/{borrowing_id}/return"
+    )
+
+    assert first_return.status_code == 200
+    assert second_return.status_code == 409

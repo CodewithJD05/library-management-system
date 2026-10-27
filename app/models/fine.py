@@ -1,5 +1,12 @@
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime, timezone
 
@@ -8,6 +15,15 @@ from app.db.base import Base
 
 class Fine(Base):
     __tablename__ = "fines"
+
+    __table_args__ = (
+    CheckConstraint("amount >= 0", name="ck_fines_amount_nonnegative"),
+    CheckConstraint("daily_rate > 0", name="ck_fines_daily_rate_positive"),
+    CheckConstraint(
+        "status IN ('unpaid', 'paid')",
+        name="ck_fines_status_valid",
+    ),
+)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 

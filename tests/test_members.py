@@ -1,3 +1,10 @@
+import pytest
+
+
+@pytest.fixture()
+def client(authenticated_client):
+    return authenticated_client
+
 
 def test_create_member(client):
     response = client.post(

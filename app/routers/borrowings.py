@@ -1,5 +1,6 @@
 
 from datetime import datetime, timezone
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -8,23 +9,33 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.book_copy import BookCopy
-from app.models.member import Member
 from app.models.borrowing import Borrowing
+from app.models.fine import Fine
+from app.models.member import Member
+from app.models.staff_user import StaffUser
+from app.routers.auth import get_current_staff_user
 from app.schemas.borrowing import (
     BorrowingCreate,
+    BorrowingDueDateUpdate,
     BorrowingResponse,
-    BorrowingDueDateUpdate
 )
-
 from app.utils.fine_calculator import calculate_fine, DAILY_FINE_RATE
 
-from app.models.fine import Fine
 
 router = APIRouter(prefix="/borrowings", tags=["Borrowings"])
 
+CurrentStaff = Annotated[
+    StaffUser,
+    Depends(get_current_staff_user),
+]
+
+DatabaseSession = Annotated[
+    Session,
+    Depends(get_db),
+]
 
 
-
+# Issue a book to a member
 @router.post(
     "/",
     response_model=BorrowingResponse,
@@ -32,7 +43,8 @@ router = APIRouter(prefix="/borrowings", tags=["Borrowings"])
 )
 def borrow_book(
     borrowing_data: BorrowingCreate,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     book_copy = db.get(BookCopy, borrowing_data.book_copy_id)
 
@@ -57,10 +69,12 @@ def borrow_book(
         )
 
     active_borrowing = db.scalar(
-        select(Borrowing.id).where(
+        select(Borrowing.id)
+        .where(
             Borrowing.book_copy_id == book_copy.id,
             Borrowing.returned_at.is_(None),
-        ).limit(1)
+        )
+        .limit(1)
     )
 
     if active_borrowing is not None or book_copy.status != "available":
@@ -84,16 +98,17 @@ def borrow_book(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="This book copy is already borrowed",
-        )
+        ) from None
 
     return borrowing
 
 
-
-
-
+# Count overdue borrowings
 @router.get("/overdue/count")
-def count_overdue_borrowings(db: Session = Depends(get_db)):
+def count_overdue_borrowings(
+    db: DatabaseSession,
+    current_user: CurrentStaff,
+):
     now = datetime.now(timezone.utc)
 
     query = select(Borrowing.id).where(
@@ -106,14 +121,16 @@ def count_overdue_borrowings(db: Session = Depends(get_db)):
     return {"overdue_count": overdue_count}
 
 
-
-
-
-@router.patch("/{borrowing_id}/due-date", response_model=BorrowingResponse)
+# Extend a borrowing's due date
+@router.patch(
+    "/{borrowing_id}/due-date",
+    response_model=BorrowingResponse,
+)
 def extend_due_date(
     borrowing_id: int,
     due_date_data: BorrowingDueDateUpdate,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     borrowing = db.get(Borrowing, borrowing_id)
 
@@ -145,10 +162,9 @@ def extend_due_date(
             detail="The new due date must be in the future",
         )
 
-    
+    # SQLite may return a datetime without timezone information.
     current_due_at = borrowing.due_at
 
-    # SQLite may return a datetime without timezone information.
     if current_due_at.tzinfo is None or current_due_at.utcoffset() is None:
         current_due_at = current_due_at.replace(tzinfo=timezone.utc)
     else:
@@ -159,7 +175,6 @@ def extend_due_date(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="The new due date must be later than the current due date",
         )
-
 
     borrowing.due_at = new_due_at
 
@@ -173,17 +188,17 @@ def extend_due_date(
     return borrowing
 
 
-
-
+# List borrowing records with filters and pagination
 @router.get("/", response_model=list[BorrowingResponse])
 def list_borrowings(
+    db: DatabaseSession,
+    current_user: CurrentStaff,
     active_only: bool = False,
     overdue_only: bool = False,
     member_id: int | None = Query(default=None, ge=1),
     book_id: int | None = Query(default=None, ge=1),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
-    db: Session = Depends(get_db),
 ):
     query = select(Borrowing)
 
@@ -196,6 +211,7 @@ def list_borrowings(
             Borrowing.returned_at.is_(None),
             Borrowing.due_at < now,
         )
+
     if member_id is not None:
         query = query.where(Borrowing.member_id == member_id)
 
@@ -206,22 +222,35 @@ def list_borrowings(
         ).where(BookCopy.book_id == book_id)
 
     query = query.order_by(Borrowing.id.desc()).offset(skip).limit(limit)
+
     return db.scalars(query).all()
 
 
-@router.put("/{borrowing_id}/return", response_model=BorrowingResponse)
-def return_book(borrowing_id: int, db: Session = Depends(get_db)):
-    borrowing = db.get(Borrowing, borrowing_id)
+# Return a borrowed book and assess any applicable fine
+@router.put(
+    "/{borrowing_id}/return",
+    response_model=BorrowingResponse,
+)
+def return_book(
+    borrowing_id: int,
+    db: DatabaseSession,
+    current_user: CurrentStaff,
+):
+    borrowing = db.scalar(
+    select(Borrowing)
+    .where(Borrowing.id == borrowing_id)
+    .with_for_update()
+)
 
     if borrowing is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Borrowing record not found",
         )
 
     if borrowing.returned_at is not None:
         raise HTTPException(
-            status_code=409,
+            status_code=status.HTTP_409_CONFLICT,
             detail="This book has already been returned",
         )
 

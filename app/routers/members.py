@@ -1,37 +1,52 @@
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.borrowing import Borrowing
 from app.models.member import Member
+from app.models.staff_user import StaffUser
+from app.routers.auth import get_current_staff_user
+from app.schemas.borrowing import BorrowingResponse
 from app.schemas.member import (
     MemberCreate,
     MemberResponse,
     MemberUpdate,
-    MemberStatusUpdate
 )
 
-from app.models.borrowing import Borrowing
 
-from app.schemas.borrowing import BorrowingResponse
+router = APIRouter(prefix="/members", tags=["Members"])
 
+CurrentStaff = Annotated[
+    StaffUser,
+    Depends(get_current_staff_user),
+]
 
-from pydantic import BaseModel
+DatabaseSession = Annotated[
+    Session,
+    Depends(get_db),
+]
+
 
 class MemberStatusUpdate(BaseModel):
     is_active: bool
 
 
-router = APIRouter(prefix="/members", tags=["Members"])
-
-
 # Create a member
-@router.post("/", response_model=MemberResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=MemberResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_member(
     member_data: MemberCreate,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     existing_member = db.scalar(
         select(Member).where(Member.email == member_data.email)
@@ -44,7 +59,6 @@ def create_member(
         )
 
     member = Member(**member_data.model_dump())
-
     db.add(member)
 
     try:
@@ -55,7 +69,7 @@ def create_member(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A member with this email already exists",
-        )
+        ) from None
 
     return member
 
@@ -63,10 +77,11 @@ def create_member(
 # List members with search and pagination
 @router.get("/", response_model=list[MemberResponse])
 def list_members(
+    db: DatabaseSession,
+    current_user: CurrentStaff,
     search: str | None = None,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
-    db: Session = Depends(get_db),
 ):
     query = select(Member)
 
@@ -85,11 +100,11 @@ def list_members(
 )
 def get_member_borrowing_history(
     member_id: int,
+    db: DatabaseSession,
+    current_user: CurrentStaff,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
-    db: Session = Depends(get_db),
 ):
-    # Check whether the member exists
     member = db.get(Member, member_id)
 
     if member is None:
@@ -98,7 +113,6 @@ def get_member_borrowing_history(
             detail="Member not found",
         )
 
-    # Get this member's borrowing records
     query = (
         select(Borrowing)
         .where(Borrowing.member_id == member_id)
@@ -109,11 +123,13 @@ def get_member_borrowing_history(
 
     return db.scalars(query).all()
 
+
 # Get a member by ID
 @router.get("/{member_id}", response_model=MemberResponse)
 def get_member(
     member_id: int,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     member = db.get(Member, member_id)
 
@@ -131,7 +147,8 @@ def get_member(
 def update_member(
     member_id: int,
     member_data: MemberUpdate,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     member = db.get(Member, member_id)
 
@@ -160,7 +177,7 @@ def update_member(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A member with this email already exists",
-        )
+        ) from None
 
     return member
 
@@ -170,7 +187,8 @@ def update_member(
 def update_member_status(
     member_id: int,
     status_data: MemberStatusUpdate,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     member = db.get(Member, member_id)
 
@@ -188,13 +206,15 @@ def update_member_status(
     return member
 
 
-
 # Delete a member
-
-@router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{member_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_member(
     member_id: int,
-    db: Session = Depends(get_db),
+    db: DatabaseSession,
+    current_user: CurrentStaff,
 ):
     member = db.get(Member, member_id)
 
@@ -218,4 +238,3 @@ def delete_member(
 
     db.delete(member)
     db.commit()
-
