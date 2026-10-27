@@ -1,7 +1,7 @@
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy import DateTime, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -42,4 +42,14 @@ class Borrowing(Base):
     returned_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_borrowings_one_active_per_copy",
+            "book_copy_id",
+            unique=True,
+            postgresql_where=returned_at.is_(None),
+            sqlite_where=returned_at.is_(None),
+        ),
     )
