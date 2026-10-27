@@ -19,10 +19,11 @@ from app.schemas.borrowing import (
     BorrowingDueDateUpdate,
     BorrowingResponse,
 )
-from app.utils.fine_calculator import calculate_fine, DAILY_FINE_RATE
+from app.utils.fine_calculator import DAILY_FINE_RATE, calculate_fine
 
 
 router = APIRouter(prefix="/borrowings", tags=["Borrowings"])
+
 
 CurrentStaff = Annotated[
     StaffUser,
@@ -46,61 +47,72 @@ def borrow_book(
     db: DatabaseSession,
     current_user: CurrentStaff,
 ):
-    book_copy = db.get(BookCopy, borrowing_data.book_copy_id)
-
-    if book_copy is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Book copy not found",
-        )
-
-    member = db.get(Member, borrowing_data.member_id)
-
-    if member is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Member not found",
-        )
-
-    if not member.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive members cannot borrow books",
-        )
-
-    active_borrowing = db.scalar(
-        select(Borrowing.id)
-        .where(
-            Borrowing.book_copy_id == book_copy.id,
-            Borrowing.returned_at.is_(None),
-        )
-        .limit(1)
-    )
-
-    if active_borrowing is not None or book_copy.status != "available":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This book copy is already borrowed",
-        )
-
-    borrowing = Borrowing(
-        book_copy_id=book_copy.id,
-        member_id=member.id,
-    )
-    book_copy.status = "borrowed"
-    db.add(borrowing)
-
     try:
+        book_copy = db.scalar(
+            select(BookCopy)
+            .where(BookCopy.id == borrowing_data.book_copy_id)
+            .with_for_update()
+        )
+
+        if book_copy is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Book copy not found",
+            )
+
+        member = db.get(Member, borrowing_data.member_id)
+
+        if member is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Member not found",
+            )
+
+        if not member.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Inactive members cannot borrow books",
+            )
+
+        active_borrowing = db.scalar(
+            select(Borrowing.id)
+            .where(
+                Borrowing.book_copy_id == book_copy.id,
+                Borrowing.returned_at.is_(None),
+            )
+            .limit(1)
+        )
+
+        if (
+            active_borrowing is not None
+            or book_copy.status != "available"
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This book copy is already borrowed",
+            )
+
+        borrowing = Borrowing(
+            book_copy_id=book_copy.id,
+            member_id=member.id,
+        )
+        book_copy.status = "borrowed"
+        db.add(borrowing)
+
         db.commit()
         db.refresh(borrowing)
+
+        return borrowing
+
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="This book copy is already borrowed",
         ) from None
-
-    return borrowing
+    except Exception:
+        db.rollback()
+        raise
 
 
 # Count overdue borrowings
@@ -221,7 +233,11 @@ def list_borrowings(
             Borrowing.book_copy_id == BookCopy.id,
         ).where(BookCopy.book_id == book_id)
 
-    query = query.order_by(Borrowing.id.desc()).offset(skip).limit(limit)
+    query = (
+        query.order_by(Borrowing.id.desc())
+        .offset(skip)
+        .limit(limit)
+    )
 
     return db.scalars(query).all()
 
@@ -236,54 +252,67 @@ def return_book(
     db: DatabaseSession,
     current_user: CurrentStaff,
 ):
-    borrowing = db.scalar(
-    select(Borrowing)
-    .where(Borrowing.id == borrowing_id)
-    .with_for_update()
-)
-
-    if borrowing is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Borrowing record not found",
+    try:
+        borrowing = db.scalar(
+            select(Borrowing)
+            .where(Borrowing.id == borrowing_id)
+            .with_for_update()
         )
 
-    if borrowing.returned_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This book has already been returned",
+        if borrowing is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Borrowing record not found",
+            )
+
+        if borrowing.returned_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This book has already been returned",
+            )
+
+        # Lock the associated copy to protect its inventory state.
+        book_copy = db.scalar(
+            select(BookCopy)
+            .where(BookCopy.id == borrowing.book_copy_id)
+            .with_for_update()
         )
 
-    book_copy = db.get(BookCopy, borrowing.book_copy_id)
+        if book_copy is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="The associated book copy was not found",
+            )
 
-    return_time = datetime.now(timezone.utc)
-    borrowing.returned_at = return_time
+        return_time = datetime.now(timezone.utc)
+        fine_amount = calculate_fine(borrowing.due_at, return_time)
 
-    if book_copy is not None:
+        borrowing.returned_at = return_time
         book_copy.status = "available"
 
-    fine_amount = calculate_fine(borrowing.due_at, return_time)
-
-    if fine_amount > 0:
-        existing_fine = db.scalar(
-            select(Fine).where(Fine.borrowing_id == borrowing.id)
-        )
-
-        if existing_fine is None:
-            fine = Fine(
-                borrowing_id=borrowing.id,
-                amount=fine_amount,
-                daily_rate=DAILY_FINE_RATE,
-                status="unpaid",
-                assessed_at=return_time,
+        if fine_amount > 0:
+            existing_fine = db.scalar(
+                select(Fine).where(
+                    Fine.borrowing_id == borrowing.id
+                )
             )
-            db.add(fine)
 
-    try:
+            if existing_fine is None:
+                db.add(
+                    Fine(
+                        borrowing_id=borrowing.id,
+                        amount=fine_amount,
+                        daily_rate=DAILY_FINE_RATE,
+                        status="unpaid",
+                        assessed_at=return_time,
+                    )
+                )
+
         db.commit()
         db.refresh(borrowing)
+
+        return borrowing
+
     except Exception:
         db.rollback()
         raise
-
-    return borrowing
