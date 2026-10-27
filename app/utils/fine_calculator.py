@@ -6,6 +6,7 @@ DAILY_FINE_RATE = 10
 
 def calculate_fine(due_at: datetime, end_at: datetime) -> int:
     """Calculate the fine in rupees for complete overdue days."""
+
     if due_at.tzinfo is None or due_at.utcoffset() is None:
         due_at = due_at.replace(tzinfo=timezone.utc)
     else:
