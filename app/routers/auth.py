@@ -74,7 +74,7 @@ def get_current_staff_user(
     try:
         payload = jwt.decode(
             token,
-            settings.secret_key,
+            settings.secret_key.get_secret_value(),
             algorithms=[ALGORITHM],
         )
         subject = payload.get("sub")
