@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
@@ -14,10 +14,7 @@ from app.routers.auth import get_current_staff_user
 from app.schemas.fine import FineResponse
 
 
-router = APIRouter(
-    prefix="/fines",
-    tags=["Fines"],
-)
+router = APIRouter(prefix="/fines", tags=["Fines"])
 
 CurrentStaff = Annotated[
     StaffUser,
@@ -29,8 +26,6 @@ DatabaseSession = Annotated[
     Depends(get_db),
 ]
 
-
-# ALL FINES
 
 @router.get("/", response_model=list[FineResponse])
 def get_fines(
@@ -53,13 +48,15 @@ def get_fines(
             .where(Borrowing.member_id == member_id)
         )
 
-    statement = statement.order_by(Fine.id.desc())
-    statement = statement.offset(skip).limit(limit)
+    statement = (
+        statement
+        .order_by(Fine.id.desc())
+        .offset(skip)
+        .limit(limit)
+    )
 
     return db.scalars(statement).all()
 
-
-# PAY FINE
 
 @router.put("/{fine_id}/pay", response_model=FineResponse)
 def pay_fine(
@@ -67,34 +64,37 @@ def pay_fine(
     db: DatabaseSession,
     current_user: CurrentStaff,
 ):
-    fine = db.get(Fine, fine_id)
-
-    if fine is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Fine record not found",
-        )
-
-    if fine.status == "paid":
-        raise HTTPException(
-            status_code=409,
-            detail="This fine has already been paid",
-        )
-
-    fine.status = "paid"
-    fine.paid_at = datetime.now(timezone.utc)
-
     try:
+        fine = db.scalar(
+            select(Fine)
+            .where(Fine.id == fine_id)
+            .with_for_update()
+        )
+
+        if fine is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Fine record not found",
+            )
+
+        if fine.status == "paid":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This fine has already been paid",
+            )
+
+        fine.status = "paid"
+        fine.paid_at = datetime.now(timezone.utc)
+
         db.commit()
         db.refresh(fine)
+
+        return fine
+
     except Exception:
         db.rollback()
         raise
 
-    return fine
-
-
-# FINE SUMMARY
 
 @router.get("/summary")
 def get_fine_summary(
