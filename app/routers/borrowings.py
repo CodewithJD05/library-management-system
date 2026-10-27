@@ -105,13 +105,35 @@ def borrow_book(
         db.refresh(borrowing)
 
         return borrowing
-
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This book copy is already borrowed",
-        ) from None
+
+        original_error = exc.orig
+        diagnostic = getattr(original_error, "diag", None)
+        constraint_name = getattr(
+            diagnostic,
+            "constraint_name",
+            None,
+        )
+
+        error_message = str(original_error)
+
+        is_duplicate_active_borrowing = (
+            constraint_name == "uq_borrowings_one_active_per_copy"
+            or "uq_borrowings_one_active_per_copy" in error_message
+        )
+
+        if is_duplicate_active_borrowing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This book copy is already borrowed",
+            ) from None
+
+        # Do not misrepresent unrelated database errors as duplicate
+        # borrowings. Let the application's normal error handling
+        # handle unexpected integrity failures.
+        raise
+
     except Exception:
         db.rollback()
         raise

@@ -6,11 +6,18 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    field_validator,
     model_validator,
 )
 
-
 class MemberCreate(BaseModel):
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Full name cannot be empty")
+        return value
     full_name: str = Field(min_length=1, max_length=150)
     email: EmailStr
     phone: str | None = Field(default=None, max_length=20)
@@ -28,6 +35,16 @@ class MemberResponse(BaseModel):
 
 
 class MemberUpdate(BaseModel):
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+
+        value = value.strip()
+        if not value:
+            raise ValueError("Full name cannot be empty")
+        return value
     full_name: str | None = Field(default=None, min_length=1, max_length=150)
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=20)

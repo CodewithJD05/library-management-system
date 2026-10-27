@@ -1,6 +1,12 @@
+from datetime import datetime, timedelta, timezone
 
-from app.core.security import create_access_token, hash_password
+import jwt
+
+from app.core.config import settings
+from app.core.security import ALGORITHM, create_access_token, hash_password
 from app.models.staff_user import StaffUser
+
+
 
 
 def create_staff_user(
@@ -115,4 +121,36 @@ def test_inactive_staff_token_is_rejected(unauthenticated_client, db_session):
     )
 
     response = unauthenticated_client.get("/books/")
+    assert response.status_code == 401
+
+
+def test_malformed_token_is_rejected(unauthenticated_client):
+    unauthenticated_client.headers.update(
+        {"Authorization": "Bearer invalid.token.value"}
+    )
+
+    response = unauthenticated_client.get("/books/")
+
+    assert response.status_code == 401
+
+
+def test_expired_token_is_rejected(unauthenticated_client, db_session):
+    staff_user = create_staff_user(db_session)
+
+    expired_token = jwt.encode(
+        {
+            "sub": str(staff_user.id),
+            "role": staff_user.role,
+            "exp": datetime.now(timezone.utc) - timedelta(minutes=5),
+        },
+        settings.secret_key.get_secret_value(),
+        algorithm=ALGORITHM,
+    )
+
+    unauthenticated_client.headers.update(
+        {"Authorization": f"Bearer {expired_token}"}
+    )
+
+    response = unauthenticated_client.get("/books/")
+
     assert response.status_code == 401

@@ -108,3 +108,34 @@ def test_update_status_for_missing_member_returns_404(client):
     )
 
     assert response.status_code == 404
+
+
+def test_create_member_trims_name(client):
+    response = client.post(
+        "/members/",
+        json={
+            "full_name": "  Jay Jadav  ",
+            "email": "trimmed.name@example.com",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["full_name"] == "Jay Jadav"
+
+
+def test_update_member_rejects_whitespace_only_name(client):
+    create_response = client.post(
+        "/members/",
+        json={
+            "full_name": "Jay Jadav",
+            "email": "update.name@example.com",
+        },
+    )
+    member_id = create_response.json()["id"]
+
+    response = client.put(
+        f"/members/{member_id}",
+        json={"full_name": "   "},
+    )
+
+    assert response.status_code == 422

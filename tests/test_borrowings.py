@@ -1,4 +1,4 @@
-
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -481,3 +481,35 @@ def test_cannot_return_borrowing_twice(client):
 
     assert first_return.status_code == 200
     assert second_return.status_code == 409
+
+
+
+def test_database_rejects_duplicate_active_borrowing(client):
+    book_id = create_test_book(client)
+    copy_id = create_test_copy(client, book_id)
+    member_id = create_test_member(client)
+
+    first_response = client.post(
+        "/borrowings/",
+        json={
+            "book_copy_id": copy_id,
+            "member_id": member_id,
+        },
+    )
+    assert first_response.status_code == 201
+
+    db_dependency = client.app.dependency_overrides[get_db]
+    db = next(db_dependency())
+
+    try:
+        duplicate = Borrowing(
+            book_copy_id=copy_id,
+            member_id=member_id,
+        )
+        db.add(duplicate)
+
+        with pytest.raises(IntegrityError):
+            db.commit()
+    finally:
+        db.rollback()
+        db.close()

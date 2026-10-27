@@ -153,3 +153,29 @@ def test_admin_can_demote_admin_when_another_active_admin_exists(
 
     assert response.status_code == 200
     assert response.json()["role"] == "librarian"
+
+
+def test_existing_token_uses_updated_staff_role(
+    authenticated_client,
+    db_session,
+):
+    # The existing token belongs to a librarian.
+    staff_user = db_session.scalar(
+        select(StaffUser).where(
+            StaffUser.email == "librarian@test.com"
+        )
+    )
+
+    assert staff_user.role == "librarian"
+
+    # A librarian cannot access staff management.
+    response = authenticated_client.get("/staff/")
+    assert response.status_code == 403
+
+    # Promote the same user without issuing a new token.
+    staff_user.role = "admin"
+    db_session.commit()
+
+    # The existing token should now use the updated database role.
+    response = authenticated_client.get("/staff/")
+    assert response.status_code == 200
