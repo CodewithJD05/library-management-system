@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -48,6 +48,7 @@ def borrow_book(
     current_user: CurrentStaff,
 ):
     try:
+        # Lock the physical copy to prevent concurrent issue operations.
         book_copy = db.scalar(
             select(BookCopy)
             .where(BookCopy.id == borrowing_data.book_copy_id)
@@ -96,6 +97,7 @@ def borrow_book(
             book_copy_id=book_copy.id,
             member_id=member.id,
         )
+
         book_copy.status = "borrowed"
         db.add(borrowing)
 
@@ -115,7 +117,7 @@ def borrow_book(
         raise
 
 
-# Count overdue borrowings
+# Count overdue borrowings efficiently in the database
 @router.get("/overdue/count")
 def count_overdue_borrowings(
     db: DatabaseSession,
@@ -123,14 +125,14 @@ def count_overdue_borrowings(
 ):
     now = datetime.now(timezone.utc)
 
-    query = select(Borrowing.id).where(
+    query = select(func.count()).select_from(Borrowing).where(
         Borrowing.returned_at.is_(None),
         Borrowing.due_at < now,
     )
 
-    overdue_count = len(db.scalars(query).all())
+    overdue_count = db.scalar(query)
 
-    return {"overdue_count": overdue_count}
+    return {"overdue_count": overdue_count or 0}
 
 
 # Extend a borrowing's due date
@@ -144,60 +146,73 @@ def extend_due_date(
     db: DatabaseSession,
     current_user: CurrentStaff,
 ):
-    borrowing = db.get(Borrowing, borrowing_id)
-
-    if borrowing is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Borrowing record not found",
-        )
-
-    if borrowing.returned_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot extend the due date of a returned borrowing",
-        )
-
-    new_due_at = due_date_data.due_at
-
-    if new_due_at.tzinfo is None or new_due_at.utcoffset() is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="The due date must include a timezone",
-        )
-
-    new_due_at = new_due_at.astimezone(timezone.utc)
-
-    if new_due_at <= datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="The new due date must be in the future",
-        )
-
-    # SQLite may return a datetime without timezone information.
-    current_due_at = borrowing.due_at
-
-    if current_due_at.tzinfo is None or current_due_at.utcoffset() is None:
-        current_due_at = current_due_at.replace(tzinfo=timezone.utc)
-    else:
-        current_due_at = current_due_at.astimezone(timezone.utc)
-
-    if new_due_at <= current_due_at:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="The new due date must be later than the current due date",
-        )
-
-    borrowing.due_at = new_due_at
-
     try:
+        # Lock the borrowing row so a concurrent return waits for this
+        # transaction to finish before changing the same borrowing.
+        borrowing = db.scalar(
+            select(Borrowing)
+            .where(Borrowing.id == borrowing_id)
+            .with_for_update()
+        )
+
+        if borrowing is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Borrowing record not found",
+            )
+
+        if borrowing.returned_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Cannot extend the due date of a returned borrowing",
+            )
+
+        new_due_at = due_date_data.due_at
+
+        if new_due_at.tzinfo is None or new_due_at.utcoffset() is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="The due date must include a timezone",
+            )
+
+        new_due_at = new_due_at.astimezone(timezone.utc)
+
+        if new_due_at <= datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="The new due date must be in the future",
+            )
+
+        # SQLite may return a datetime without timezone information.
+        current_due_at = borrowing.due_at
+
+        if (
+            current_due_at.tzinfo is None
+            or current_due_at.utcoffset() is None
+        ):
+            current_due_at = current_due_at.replace(tzinfo=timezone.utc)
+        else:
+            current_due_at = current_due_at.astimezone(timezone.utc)
+
+        if new_due_at <= current_due_at:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=(
+                    "The new due date must be later than "
+                    "the current due date"
+                ),
+            )
+
+        borrowing.due_at = new_due_at
+
         db.commit()
         db.refresh(borrowing)
+
+        return borrowing
+
     except Exception:
         db.rollback()
         raise
-
-    return borrowing
 
 
 # List borrowing records with filters and pagination
@@ -253,6 +268,8 @@ def return_book(
     current_user: CurrentStaff,
 ):
     try:
+        # Lock the borrowing first to serialize concurrent returns
+        # and due-date updates for the same borrowing.
         borrowing = db.scalar(
             select(Borrowing)
             .where(Borrowing.id == borrowing_id)
@@ -271,7 +288,7 @@ def return_book(
                 detail="This book has already been returned",
             )
 
-        # Lock the associated copy to protect its inventory state.
+        # Lock the physical copy before updating its inventory status.
         book_copy = db.scalar(
             select(BookCopy)
             .where(BookCopy.id == borrowing.book_copy_id)
