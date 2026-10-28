@@ -1,5 +1,6 @@
 
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -18,7 +19,6 @@ from app.routers.fines import router as fines_router
 from app.routers.members import router as members_router
 from app.routers.staff import router as staff_router
 
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title=settings.app_name,
@@ -28,10 +28,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5500",
-        "http://localhost:5500",
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
@@ -45,6 +42,7 @@ app.include_router(book_copies_router)
 app.include_router(fines_router)
 app.include_router(dashboard_router)
 app.include_router(staff_router)
+
 
 @app.get("/")
 def home():
