@@ -179,3 +179,42 @@ def test_existing_token_uses_updated_staff_role(
     # The existing token should now use the updated database role.
     response = authenticated_client.get("/staff/")
     assert response.status_code == 200
+
+def test_librarian_cannot_modify_staff_accounts(
+    authenticated_client,
+    db_session,
+):
+    staff_user = db_session.scalar(
+        select(StaffUser).where(
+            StaffUser.email == "librarian@test.com"
+        )
+    )
+
+    staff_id = staff_user.id
+
+    responses = [
+        authenticated_client.post(
+            "/staff/",
+            json={
+                "full_name": "Unauthorized User",
+                "email": "unauthorized@test.com",
+                "password": "StrongPassword123!",
+                "role": "librarian",
+            },
+        ),
+        authenticated_client.get(f"/staff/{staff_id}"),
+        authenticated_client.patch(
+            f"/staff/{staff_id}",
+            json={"full_name": "Changed Name"},
+        ),
+        authenticated_client.patch(
+            f"/staff/{staff_id}/status",
+            json={"is_active": False},
+        ),
+    ]
+
+    assert all(response.status_code == 403 for response in responses)
+
+    db_session.refresh(staff_user)
+    assert staff_user.full_name == "Test Librarian"
+    assert staff_user.is_active is True

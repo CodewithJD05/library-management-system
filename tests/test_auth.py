@@ -154,3 +154,49 @@ def test_expired_token_is_rejected(unauthenticated_client, db_session):
     response = unauthenticated_client.get("/books/")
 
     assert response.status_code == 401
+
+def test_token_with_wrong_signature_is_rejected(
+    unauthenticated_client,
+    db_session,
+):
+    staff_user = create_staff_user(db_session)
+
+    token = jwt.encode(
+        {
+            "sub": str(staff_user.id),
+            "role": staff_user.role,
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        },
+        "a-different-secret-key-that-is-not-the-app-secret",
+        algorithm=ALGORITHM,
+    )
+
+    unauthenticated_client.headers.update(
+        {"Authorization": f"Bearer {token}"}
+    )
+
+    response = unauthenticated_client.get("/books/")
+
+    assert response.status_code == 401
+
+
+def test_token_with_invalid_subject_is_rejected(
+    unauthenticated_client,
+):
+    token = jwt.encode(
+        {
+            "sub": "not-a-user-id",
+            "role": "admin",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        },
+        settings.secret_key.get_secret_value(),
+        algorithm=ALGORITHM,
+    )
+
+    unauthenticated_client.headers.update(
+        {"Authorization": f"Bearer {token}"}
+    )
+
+    response = unauthenticated_client.get("/books/")
+
+    assert response.status_code == 401

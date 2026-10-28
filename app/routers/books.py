@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.book import Book
 from app.models.book_copy import BookCopy
-from app.models.borrowing import Borrowing
 from app.models.staff_user import StaffUser
 from app.routers.auth import get_current_staff_user
 from app.schemas.book import BookCreate, BookResponse, BookUpdate
@@ -31,6 +30,33 @@ DatabaseSession = Annotated[
 ]
 
 
+
+def is_duplicate_isbn_error(error: IntegrityError) -> bool:
+    """Identify a duplicate ISBN across PostgreSQL and SQLite."""
+    original_error = error.orig
+
+    # PostgreSQL: inspect the reported constraint name.
+    diagnostic = getattr(original_error, "diag", None)
+    constraint_name = getattr(diagnostic, "constraint_name", None)
+
+    if constraint_name == "books_isbn_key":
+        return True
+
+    # SQLite: inspect the specific unique-column error.
+    error_message = str(original_error)
+
+    if error_message == "UNIQUE constraint failed: books.isbn":
+        return True
+
+    return False
+
+def duplicate_isbn_exception() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="A book with this ISBN already exists",
+    )
+
+
 @router.post(
     "/",
     response_model=BookResponse,
@@ -46,20 +72,23 @@ def create_book(
     )
 
     if existing_book:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A book with this ISBN already exists",
-        )
+        raise duplicate_isbn_exception()
 
     book = Book(**book_data.model_dump())
-
     db.add(book)
-    db.commit()
-    db.refresh(book)
+
+    try:
+        db.commit()
+        db.refresh(book)
+    except IntegrityError as error:
+        db.rollback()
+
+        if is_duplicate_isbn_error(error):
+            raise duplicate_isbn_exception() from None
+
+        raise
 
     return book
-
-
 
 
 @router.get("/", response_model=list[BookResponse])
@@ -96,7 +125,6 @@ def list_books(
     )
 
     return db.scalars(statement).all()
-
 
 
 @router.get("/{book_id}", response_model=BookResponse)
@@ -145,12 +173,13 @@ def update_book(
     try:
         db.commit()
         db.refresh(book)
-    except IntegrityError:
+    except IntegrityError as error:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A book with this ISBN already exists",
-        ) from None
+
+        if is_duplicate_isbn_error(error):
+            raise duplicate_isbn_exception() from None
+
+        raise
 
     return book
 
