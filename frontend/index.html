@@ -1,0 +1,1209 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>LibraryOS | Management Console</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Staff Login -->
+    <section id="login-screen" class="login-screen" hidden>
+        <form id="login-form" class="login-card">
+            <div class="login-brand">LibraryOS</div>
+            <h1>Welcome back</h1>
+            <p>Sign in with your library staff account.</p>
+
+            <label for="login-email">Email address</label>
+            <input
+                id="login-email"
+                name="username"
+                type="email"
+                placeholder="staff@example.com"
+                autocomplete="username"
+                required
+            >
+
+            <label for="login-password">Password</label>
+            <input
+                id="login-password"
+                name="password"
+                type="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+                required
+            >
+
+            <p id="login-error" class="login-error" role="alert"></p>
+            <button id="login-button" type="submit">Sign in</button>
+        </form>
+    </section>
+
+    <!-- Application -->
+    <div id="dashboard-screen" class="app-shell" hidden>
+        <aside class="sidebar">
+            <a href="#" class="brand" data-page="Dashboard">
+                <span class="brand-icon">L</span>
+                <span>Library<span class="brand-light">OS</span></span>
+            </a>
+
+            <p class="nav-label">WORKSPACE</p>
+
+            <nav class="navigation">
+                <a href="#" class="nav-item active" data-page="Dashboard">
+                    <span>▦</span> Dashboard
+                </a>
+
+                <a href="#" class="nav-item" data-page="Books">
+                    <span>▤</span> Books &amp; Copies
+                </a>
+
+                <a href="#" class="nav-item" data-page="Members">
+                    <span>♙</span> Members
+                </a>
+
+                <a href="#" class="nav-item" data-page="Borrowings">
+                    <span>⇄</span> Borrowings
+                </a>
+
+                <a href="#" class="nav-item" data-page="Fines">
+                    <span>◷</span> Fines &amp; Payments
+                </a>
+
+                <a href="#" class="nav-item" data-page="Staff">
+                    <span>♙</span> Staff Management
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="api-indicator">
+                    <span id="api-dot" class="status-dot"></span>
+                    <div>
+                        <strong>Backend API</strong>
+                        <small id="api-status">Checking connection…</small>
+                    </div>
+                </div>
+
+                <button id="logout-button" class="logout-button" type="button">
+                    Sign out
+                </button>
+
+                <p class="sidebar-footer">LIBRARY MANAGEMENT SYSTEM</p>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Dashboard page -->
+            <section id="dashboard-page" class="app-page">
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">OVERVIEW</p>
+                        <h1>Dashboard</h1>
+                    </div>
+                    <div class="topbar-right">
+                        <span class="live-label"><span></span> Admin workspace</span>
+                        <div class="avatar">A</div>
+                    </div>
+                </header>
+
+                <section class="welcome">
+                    <div>
+                        <p class="eyebrow">LIBRARY OPERATIONS</p>
+                        <h2>Everything at a glance.</h2>
+                        <p>Monitor your catalogue, members, loans, and overdue activity.</p>
+                    </div>
+                    <div class="welcome-mark">L<span>OS</span></div>
+                </section>
+
+                <section class="section-heading">
+                    <div>
+                        <h2>Library overview</h2>
+                        <p>Your key operational metrics</p>
+                    </div>
+                    <span class="period-label">CURRENT SNAPSHOT</span>
+                </section>
+
+                <section class="stats-grid">
+                    <article class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon purple">▤</span>
+                            <span class="stat-caption">CATALOGUE</span>
+                        </div>
+                        <p class="stat-title">Total titles</p>
+                        <p class="stat-value" id="total-books">—</p>
+                        <p class="stat-note">Books in the catalogue</p>
+                    </article>
+
+                    <article class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon blue">▣</span>
+                            <span class="stat-caption">INVENTORY</span>
+                        </div>
+                        <p class="stat-title">Physical copies</p>
+                        <p class="stat-value" id="total-copies">—</p>
+                        <p class="stat-note">Individual book copies</p>
+                    </article>
+
+                    <article class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon green">♙</span>
+                            <span class="stat-caption">COMMUNITY</span>
+                        </div>
+                        <p class="stat-title">Active members</p>
+                        <p class="stat-value" id="active-members">—</p>
+                        <p class="stat-note">Currently active accounts</p>
+                    </article>
+
+                    <article class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon orange">⇄</span>
+                            <span class="stat-caption">CIRCULATION</span>
+                        </div>
+                        <p class="stat-title">Active loans</p>
+                        <p class="stat-value" id="active-loans">—</p>
+                        <p class="stat-note">Books currently borrowed</p>
+                    </article>
+                </section>
+
+                <section class="content-grid">
+                    <article class="panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Quick actions</h2>
+                                <p>Common library operations</p>
+                            </div>
+                            <span class="panel-symbol">↗</span>
+                        </div>
+
+                        <div class="action-list">
+                            <button class="action-item" data-page="Books">
+                                <span class="action-icon purple">＋</span>
+                                <span>
+                                    <strong>Manage books</strong>
+                                    <small>Catalogue and physical copies</small>
+                                </span>
+                                <span class="action-arrow">→</span>
+                            </button>
+
+                            <button class="action-item" data-page="Members">
+                                <span class="action-icon blue">♙</span>
+                                <span>
+                                    <strong>Manage members</strong>
+                                    <small>Member records and status</small>
+                                </span>
+                                <span class="action-arrow">→</span>
+                            </button>
+
+                            <button class="action-item" data-page="Borrowings">
+                                <span class="action-icon green">⇄</span>
+                                <span>
+                                    <strong>Manage borrowings</strong>
+                                    <small>Issue and return copies</small>
+                                </span>
+                                <span class="action-arrow">→</span>
+                            </button>
+
+                            <button class="action-item" data-page="Fines">
+                                <span class="action-icon orange">₹</span>
+                                <span>
+                                    <strong>Review fines</strong>
+                                    <small>Outstanding fines and payments</small>
+                                </span>
+                                <span class="action-arrow">→</span>
+                            </button>
+                        </div>
+                    </article>
+
+                    <article class="panel system-panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>System status</h2>
+                                <p>Connection checks</p>
+                            </div>
+                            <span class="system-symbol">⌘</span>
+                        </div>
+
+                        <div class="system-row">
+                            <div>
+                                <span id="frontend-dot" class="status-dot online"></span>
+                                Frontend
+                            </div>
+                            <span class="status-text good">Running</span>
+                        </div>
+
+                        <div class="system-row">
+                            <div>
+                                <span id="backend-dot" class="status-dot"></span>
+                                FastAPI
+                            </div>
+                            <span id="backend-health" class="status-text">Checking…</span>
+                        </div>
+
+                        <div class="system-row">
+                            <div>
+                                <span class="status-dot online"></span>
+                                PostgreSQL
+                            </div>
+                            <span class="status-text neutral">Via backend</span>
+                        </div>
+
+                        <div id="system-message" class="system-message">
+                            Connecting to the API…
+                        </div>
+                    </article>
+                </section>
+
+                <footer class="page-footer">
+                    <span>LibraryOS <span class="footer-dot">•</span> Management Console</span>
+                    <span>Dashboard</span>
+                </footer>
+            </section>
+
+            <!-- Books and copies page -->
+            <section id="books-page" class="app-page" hidden>
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">CATALOGUE MANAGEMENT</p>
+                        <h1>Books &amp; Copies</h1>
+                    </div>
+                    <div class="topbar-right">
+                        <span class="live-label"><span></span> Admin workspace</span>
+                        <div class="avatar">A</div>
+                    </div>
+                </header>
+
+                <section class="page-intro">
+                    <div>
+                        <h2>Manage your collection</h2>
+                        <p>Search titles, maintain catalogue records, and manage individual copies.</p>
+                    </div>
+                    <button id="show-add-book" class="primary-button" type="button">
+                        + Add book
+                    </button>
+                </section>
+
+                <section class="book-summary-grid">
+                    <article class="mini-stat">
+                        <span>Total titles</span>
+                        <strong id="books-count">—</strong>
+                    </article>
+                    <article class="mini-stat">
+                        <span>Physical copies shown</span>
+                        <strong id="copies-count">—</strong>
+                    </article>
+                </section>
+
+                <section class="panel catalogue-panel">
+                    <div class="catalogue-toolbar">
+                        <div>
+                            <h2>Book catalogue</h2>
+                            <p>Search by title or ISBN</p>
+                        </div>
+
+                        <form id="book-search-form" class="search-form">
+                            <input
+                                id="book-search"
+                                type="search"
+                                placeholder="Search books…"
+                                aria-label="Search books"
+                            >
+                            <button type="submit" class="secondary-button">Search</button>
+                            <button id="clear-search" type="button" class="secondary-button">
+                                Clear
+                            </button>
+                        </form>
+                    </div>
+
+                    <p id="books-message" class="page-message" role="status"></p>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Book</th>
+                                    <th>ISBN</th>
+                                    <th>Published</th>
+                                    <th>Copies</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="books-table-body">
+                                <tr>
+                                    <td colspan="5" class="empty-state">Loading books…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <span id="pagination-info">Page 1</span>
+                        <div>
+                            <button id="previous-page" class="secondary-button" type="button">
+                                Previous
+                            </button>
+                            <button id="next-page" class="secondary-button" type="button">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <footer class="page-footer">
+                    <span>LibraryOS <span class="footer-dot">•</span> Management Console</span>
+                    <span>Books &amp; Copies</span>
+                </footer>
+            </section>
+
+            <!-- Members page -->
+            <section id="members-page" class="app-page" hidden>
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">MEMBER MANAGEMENT</p>
+                        <h1>Members</h1>
+                    </div>
+                    <div class="topbar-right">
+                        <span class="live-label"><span></span> Admin workspace</span>
+                        <div class="avatar">A</div>
+                    </div>
+                </header>
+
+                <section class="page-intro">
+                    <div>
+                        <h2>Manage library members</h2>
+                        <p>Maintain member records, manage account status, and review borrowing history.</p>
+                    </div>
+                    <button id="show-add-member" class="primary-button" type="button">
+                        + Add member
+                    </button>
+                </section>
+
+                <section class="book-summary-grid">
+                    <article class="mini-stat">
+                        <span>Members on this page</span>
+                        <strong id="members-count">—</strong>
+                    </article>
+                    <article class="mini-stat">
+                        <span>Active members on this page</span>
+                        <strong id="active-members-count">—</strong>
+                    </article>
+                </section>
+
+                <section class="panel catalogue-panel">
+                    <div class="catalogue-toolbar">
+                        <div>
+                            <h2>Member directory</h2>
+                            <p>Search by member name</p>
+                        </div>
+
+                        <form id="member-search-form" class="search-form">
+                            <input
+                                id="member-search"
+                                type="search"
+                                placeholder="Search members…"
+                                aria-label="Search members"
+                            >
+                            <button type="submit" class="secondary-button">Search</button>
+                            <button id="clear-member-search" type="button" class="secondary-button">
+                                Clear
+                            </button>
+                        </form>
+                    </div>
+
+                    <p id="members-message" class="page-message" role="status"></p>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Member</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="members-table-body">
+                                <tr>
+                                    <td colspan="6" class="empty-state">Members will load here.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <span id="members-pagination-info">Page 1</span>
+                        <div>
+                            <button id="previous-members-page" class="secondary-button" type="button">
+                                Previous
+                            </button>
+                            <button id="next-members-page" class="secondary-button" type="button">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <footer class="page-footer">
+                    <span>LibraryOS <span class="footer-dot">•</span> Management Console</span>
+                    <span>Members</span>
+                </footer>
+            </section>
+         
+<!-- Borrowings page -->
+<section id="borrowings-page" class="app-page" hidden>
+    <header class="topbar">
+        <div>
+            <p class="eyebrow">CIRCULATION MANAGEMENT</p>
+            <h1>Borrowings</h1>
+        </div>
+        <div class="topbar-right">
+            <span class="live-label"><span></span> Admin workspace</span>
+            <div class="avatar">A</div>
+        </div>
+    </header>
+
+    <section class="page-intro">
+        <div>
+            <h2>Manage book loans</h2>
+            <p>Issue books, review active loans, identify overdue books, and process returns.</p>
+        </div>
+        <div class="page-actions">
+            <button id="show-issue-book" class="primary-button" type="button">
+                + Issue Book
+            </button>
+            <button id="refresh-borrowings" class="secondary-button" type="button">
+                Refresh
+            </button>
+        </div>
+    </section>
+
+    <section class="book-summary-grid">
+        <article class="mini-stat">
+            <span>Records shown</span>
+            <strong id="borrowings-count">—</strong>
+        </article>
+        <article class="mini-stat">
+            <span>Overdue loans</span>
+            <strong id="overdue-borrowings-count">—</strong>
+        </article>
+    </section>
+
+    <section class="panel catalogue-panel">
+        <div class="catalogue-toolbar">
+            <div>
+                <h2>Borrowing records</h2>
+                <p>Track issue dates, due dates, and returns.</p>
+            </div>
+            <div class="search-form">
+                <select id="borrowing-filter" aria-label="Filter borrowing records">
+                    <option value="all">All records</option>
+                    <option value="active">Active loans</option>
+                    <option value="overdue">Overdue loans</option>
+                </select>
+            </div>
+        </div>
+
+        <p id="borrowings-message" class="page-message" role="status"></p>
+
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Loan ID</th>
+                        <th>Member ID</th>
+                        <th>Copy ID</th>
+                        <th>Borrowed</th>
+                        <th>Due date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="borrowings-table-body">
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            Borrowing records will load here.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination">
+            <span id="borrowings-pagination-info">Page 1</span>
+            <div>
+                <button id="previous-borrowings-page"
+                    class="secondary-button" type="button">
+                    Previous
+                </button>
+                <button id="next-borrowings-page"
+                    class="secondary-button" type="button">
+                    Next
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <footer class="page-footer">
+        <span>LibraryOS <span class="footer-dot">•</span> Management Console</span>
+        <span>Borrowings</span>
+    </footer>
+</section>
+
+<!-- Issue book dialog -->
+<dialog id="issue-book-dialog" class="app-dialog">
+    <form id="issue-book-form" class="dialog-form">
+        <div class="dialog-heading">
+            <div>
+                <p class="eyebrow">CIRCULATION MANAGEMENT</p>
+                <h2>Issue a book</h2>
+            </div>
+            <button
+                type="button"
+                class="icon-button"
+                data-close-dialog="issue-book-dialog"
+                aria-label="Close"
+            >
+                ×
+            </button>
+        </div>
+
+        <p>Select an active member and an available physical copy.</p>
+
+        <label for="issue-member">Member *</label>
+        <select id="issue-member" name="member_id" required>
+            <option value="">Select a member</option>
+        </select>
+
+        <label for="issue-book-copy">Available book copy *</label>
+        <select id="issue-book-copy" name="book_copy_id" required>
+            <option value="">Select an available copy</option>
+        </select>
+
+        <p id="issue-book-error" class="form-error" role="alert"></p>
+
+        <div class="dialog-actions">
+            <button
+                type="button"
+                id="cancel-issue-book"
+                class="secondary-button"
+            >
+                Cancel
+            </button>
+            <button
+                type="submit"
+                id="save-issue-book"
+                class="primary-button"
+            >
+                Issue book
+            </button>
+        </div>
+    </form>
+</dialog>
+
+
+            <!-- Fines and payments page -->
+            <section id="fines-page" class="app-page" hidden>
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">FINANCIAL MANAGEMENT</p>
+                        <h1>Fines &amp; Payments</h1>
+                    </div>
+                    <div class="topbar-right">
+                        <span class="live-label"><span></span> Admin workspace</span>
+                        <div class="avatar">A</div>
+                    </div>
+                </header>
+
+                <section class="page-intro">
+                    <div>
+                        <h2>Manage library fines</h2>
+                        <p>Review outstanding fines, track payments, and monitor collected amounts.</p>
+                    </div>
+                    <button id="refresh-fines" class="secondary-button" type="button">
+                        Refresh
+                    </button>
+                </section>
+
+                <section class="stats-grid">
+                    <article class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon purple">₹</span>
+                            <span class="stat-caption">ALL FINES</span>
+                        </div>
+                        <p class="stat-title">Total amount</p>
+                        <p class="stat-value" id="total-fines-amount">—</p>
+                        <p class="stat-note">All recorded fines</p>
+                    </article>
+
+                    <article class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon orange">₹</span>
+                            <span class="stat-caption">OUTSTANDING</span>
+                        </div>
+                        <p class="stat-title">Unpaid amount</p>
+                        <p class="stat-value" id="unpaid-fines-amount">—</p>
+                        <p class="stat-note">Awaiting payment</p>
+                    </article>
+
+                    <article class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon green">₹</span>
+                            <span class="stat-caption">COLLECTED</span>
+                        </div>
+                        <p class="stat-title">Paid amount</p>
+                        <p class="stat-value" id="paid-fines-amount">—</p>
+                        <p class="stat-note">Payments recorded</p>
+                    </article>
+
+                    <article class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon blue">#</span>
+                            <span class="stat-caption">RECORDS</span>
+                        </div>
+                        <p class="stat-title">Fines shown</p>
+                        <p class="stat-value" id="fines-count">—</p>
+                        <p class="stat-note">Records on this page</p>
+                    </article>
+                </section>
+
+                <section class="panel catalogue-panel">
+                    <div class="catalogue-toolbar">
+                        <div>
+                            <h2>Fine records</h2>
+                            <p>Review unpaid and settled fines.</p>
+                        </div>
+                        <div class="search-form">
+                            <select id="fine-filter" aria-label="Filter fines">
+                                <option value="all">All fines</option>
+                                <option value="unpaid">Unpaid fines</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <p id="fines-message" class="page-message" role="status"></p>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fine ID</th>
+                                    <th>Borrowing ID</th>
+                                    <th>Member ID</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fines-table-body">
+                                <tr>
+                                    <td colspan="7" class="empty-state">Fine records will load here.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <span id="fines-pagination-info">Page 1</span>
+                        <div>
+                            <button id="previous-fines-page" class="secondary-button" type="button">
+                                Previous
+                            </button>
+                            <button id="next-fines-page" class="secondary-button" type="button">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <footer class="page-footer">
+                    <span>LibraryOS <span class="footer-dot">•</span> Management Console</span>
+                    <span>Fines &amp; Payments</span>
+                </footer>
+            </section>
+
+            <!-- Staff management page -->
+            <section id="staff-page" class="app-page" hidden>
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">ACCESS MANAGEMENT</p>
+                        <h1>Staff Management</h1>
+                    </div>
+                    <div class="topbar-right">
+                        <span class="live-label"><span></span> Admin workspace</span>
+                        <div class="avatar">A</div>
+                    </div>
+                </header>
+
+                <section class="page-intro">
+                    <div>
+                        <h2>Manage staff accounts</h2>
+                        <p>Review staff access, manage account details, and control account status.</p>
+                    </div>
+
+                    <div class="page-actions">
+                        <button id="create-staff-button" class="primary-button" type="button">
+                            + Create Staff
+                        </button>
+                        <button id="refresh-staff" class="secondary-button" type="button">
+                            Refresh
+                        </button>
+                    </div>
+                </section>
+
+                <section class="book-summary-grid">
+                    <article class="mini-stat">
+                        <span>Staff records shown</span>
+                        <strong id="staff-count">—</strong>
+                    </article>
+                    <article class="mini-stat">
+                        <span>Active accounts shown</span>
+                        <strong id="active-staff-count">—</strong>
+                    </article>
+                </section>
+
+                <section class="panel catalogue-panel">
+                    <div class="catalogue-toolbar">
+                        <div>
+                            <h2>Staff directory</h2>
+                            <p>Review accounts and access status.</p>
+                        </div>
+                    </div>
+
+                    <p id="staff-message" class="page-message" role="status"></p>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Staff ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staff-table-body">
+                                <tr>
+                                    <td colspan="6" class="empty-state">Staff records will load here.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <span id="staff-pagination-info">Page 1</span>
+                        <div>
+                            <button
+                                id="previous-staff-page"
+                                class="secondary-button"
+                                type="button"
+                                disabled
+                            >
+                                Previous
+                            </button>
+                            <button
+                                id="next-staff-page"
+                                class="secondary-button"
+                                type="button"
+                                disabled
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <footer class="page-footer">
+                    <span>LibraryOS <span class="footer-dot">•</span> Management Console</span>
+                    <span>Staff Management</span>
+                </footer>
+            </section>
+        </main>
+    </div>
+
+    <!-- Staff management dialog -->
+    <dialog id="staff-dialog" class="app-dialog">
+        <form id="staff-form" class="dialog-form">
+            <div class="dialog-heading">
+                <div>
+                    <p class="eyebrow">ACCESS MANAGEMENT</p>
+                    <h2 id="staff-dialog-title">Create Staff Account</h2>
+                </div>
+                <button
+                    type="button"
+                    id="close-staff-dialog"
+                    class="icon-button"
+                    aria-label="Close"
+                >
+                    ×
+                </button>
+            </div>
+
+            <input type="hidden" id="staff-id">
+
+            <label for="staff-name">Full name *</label>
+            <input
+                type="text"
+                id="staff-name"
+                minlength="2"
+                maxlength="150"
+                autocomplete="name"
+                required
+            >
+
+            <label for="staff-email">Email address *</label>
+            <input
+                type="email"
+                id="staff-email"
+                maxlength="255"
+                autocomplete="email"
+                required
+            >
+
+            <label for="staff-password">Password *</label>
+            <input
+                type="password"
+                id="staff-password"
+                minlength="12"
+                maxlength="128"
+                autocomplete="new-password"
+                required
+            >
+            <small>
+                Use at least 12 characters. When editing, leave blank to keep
+                the existing password.
+            </small>
+
+            <label for="staff-role">Role *</label>
+            <select id="staff-role" required>
+                <option value="librarian">Librarian</option>
+                <option value="admin">Admin</option>
+            </select>
+
+            <p id="staff-form-error" class="form-error" role="alert"></p>
+
+            <div class="dialog-actions">
+                <button
+                    type="button"
+                    class="secondary-button"
+                    id="cancel-staff-dialog"
+                >
+                    Cancel
+                </button>
+                <button id="save-staff-button" type="submit" class="primary-button">
+                    Save Staff Account
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Extend borrowing due date dialog -->
+    <dialog id="due-date-dialog" class="app-dialog">
+        <form id="due-date-form" class="dialog-form">
+            <div class="dialog-heading">
+                <div>
+                    <p class="eyebrow">CIRCULATION MANAGEMENT</p>
+                    <h2>Extend due date</h2>
+                </div>
+                <button
+                    type="button"
+                    class="icon-button"
+                    data-close-dialog="due-date-dialog"
+                    aria-label="Close"
+                >
+                    ×
+                </button>
+            </div>
+
+            <p id="due-date-current" class="dialog-subtitle"></p>
+
+            <label for="new-due-date">New due date and time *</label>
+            <input id="new-due-date" name="due_at" type="datetime-local" required>
+
+            <p id="due-date-error" class="form-error" role="alert"></p>
+
+            <div class="dialog-actions">
+                <button
+                    type="button"
+                    class="secondary-button"
+                    data-close-dialog="due-date-dialog"
+                >
+                    Cancel
+                </button>
+                <button id="save-due-date" class="primary-button" type="submit">
+                    Update due date
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Add/edit member dialog -->
+    <dialog id="member-dialog" class="app-dialog">
+        <form id="member-form" class="dialog-form">
+            <div class="dialog-heading">
+                <div>
+                    <p class="eyebrow">MEMBER RECORD</p>
+                    <h2 id="member-dialog-title">Add a member</h2>
+                </div>
+                <button
+                    type="button"
+                    class="icon-button"
+                    data-close-dialog="member-dialog"
+                    aria-label="Close"
+                >
+                    ×
+                </button>
+            </div>
+
+            <label for="member-name">Full name *</label>
+            <input
+                id="member-name"
+                name="full_name"
+                maxlength="150"
+                autocomplete="name"
+                required
+            >
+
+            <label for="member-email">Email address *</label>
+            <input
+                id="member-email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+            >
+
+            <label for="member-phone">Phone</label>
+            <input
+                id="member-phone"
+                name="phone"
+                type="tel"
+                maxlength="20"
+                autocomplete="tel"
+            >
+
+            <p id="member-form-error" class="form-error" role="alert"></p>
+
+            <div class="dialog-actions">
+                <button
+                    type="button"
+                    class="secondary-button"
+                    data-close-dialog="member-dialog"
+                >
+                    Cancel
+                </button>
+                <button id="save-member-button" class="primary-button" type="submit">
+                    Save member
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Member borrowing history dialog -->
+    <dialog id="member-history-dialog" class="app-dialog copies-dialog">
+        <div class="dialog-form">
+            <div class="dialog-heading">
+                <div>
+                    <p class="eyebrow">CIRCULATION HISTORY</p>
+                    <h2 id="member-history-title">Borrowing history</h2>
+                    <p id="member-history-subtitle" class="dialog-subtitle"></p>
+                </div>
+                <button
+                    type="button"
+                    class="icon-button"
+                    data-close-dialog="member-history-dialog"
+                    aria-label="Close"
+                >
+                    ×
+                </button>
+            </div>
+
+            <p id="member-history-message" class="page-message" role="status"></p>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Loan ID</th>
+                            <th>Copy ID</th>
+                            <th>Borrowed</th>
+                            <th>Due date</th>
+                            <th>Returned</th>
+                        </tr>
+                    </thead>
+                    <tbody id="member-history-table-body">
+                        <tr>
+                            <td colspan="5" class="empty-state">Loading history…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Add book dialog -->
+    <dialog id="add-book-dialog" class="app-dialog">
+        <form id="add-book-form" class="dialog-form">
+            <div class="dialog-heading">
+                <div>
+                    <p class="eyebrow">CATALOGUE</p>
+                    <h2>Add a book</h2>
+                </div>
+                <button
+                    type="button"
+                    class="icon-button"
+                    data-close-dialog="add-book-dialog"
+                    aria-label="Close"
+                >
+                    ×
+                </button>
+            </div>
+
+            <label for="new-book-title">Title *</label>
+            <input id="new-book-title" name="title" maxlength="200" required>
+
+            <label for="new-book-isbn">ISBN *</label>
+            <input id="new-book-isbn" name="isbn" maxlength="20" required>
+
+            <label for="new-book-year">Publication year</label>
+            <input
+                id="new-book-year"
+                name="published_year"
+                type="number"
+                min="1"
+                max="9999"
+                placeholder="e.g. 2024"
+            >
+
+            <label for="new-book-description">Description</label>
+            <textarea
+                id="new-book-description"
+                name="description"
+                rows="3"
+                placeholder="Optional book description"
+            ></textarea>
+
+            <p id="add-book-error" class="form-error" role="alert"></p>
+
+            <div class="dialog-actions">
+                <button
+                    type="button"
+                    class="secondary-button"
+                    data-close-dialog="add-book-dialog"
+                >
+                    Cancel
+                </button>
+                <button id="save-book-button" class="primary-button" type="submit">
+                    Save book
+                </button>
+            </div>
+        </form>
+    </dialog>    
+    <!-- Edit book dialog -->
+<dialog id="edit-book-dialog" class="form-dialog">
+    <div class="dialog-header">
+        <div>
+            <p class="dialog-eyebrow">BOOK RECORD</p>
+            <h2>Edit book</h2>
+        </div>
+        <button type="button" id="close-edit-book" class="icon-button" aria-label="Close">
+            &times;
+        </button>
+    </div>
+
+    <form id="edit-book-form">
+        <p id="edit-book-error" class="form-error" role="alert"></p>
+
+        <label for="edit-book-title">Book title *</label>
+        <input id="edit-book-title" name="title" type="text" maxlength="200" required>
+
+        <label for="edit-book-isbn">ISBN *</label>
+        <input id="edit-book-isbn" name="isbn" type="text" maxlength="20" required>
+
+        <label for="edit-book-year">Published year</label>
+        <input id="edit-book-year" name="published_year" type="number" min="1" max="9999">
+
+        <label for="edit-book-description">Description</label>
+        <textarea id="edit-book-description" name="description" rows="3"></textarea>
+
+        <div class="dialog-actions">
+            <button type="button" id="cancel-edit-book" class="secondary-button">
+                Cancel
+            </button>
+            <button type="submit" id="save-edit-book" class="primary-button">
+                Save changes
+            </button>
+        </div>
+    </form>
+</dialog>
+
+    <!-- Physical copies dialog -->
+    <dialog id="copies-dialog" class="app-dialog copies-dialog">
+        <div class="dialog-form">
+            <div class="dialog-heading">
+                <div>
+                    <p class="eyebrow">INVENTORY MANAGEMENT</p>
+                    <h2 id="copies-dialog-title">Physical copies</h2>
+                    <p id="copies-dialog-subtitle" class="dialog-subtitle"></p>
+                </div>
+                <button
+                    type="button"
+                    class="icon-button"
+                    data-close-dialog="copies-dialog"
+                    aria-label="Close"
+                >
+                    ×
+                </button>
+            </div>
+
+            <form id="add-copy-form" class="add-copy-form">
+                <label for="new-copy-barcode">New copy barcode</label>
+                <div class="inline-form">
+                    <input
+                        id="new-copy-barcode"
+                        name="barcode"
+                        maxlength="50"
+                        placeholder="e.g. LIB-BOOK-001"
+                        required
+                    >
+                    <button id="add-copy-button" class="primary-button" type="submit">
+                        Add copy
+                    </button>
+                </div>
+                <p id="add-copy-error" class="form-error" role="alert"></p>
+            </form>
+
+            <p id="copies-message" class="page-message" role="status"></p>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Copy ID</th>
+                            <th>Barcode</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="copies-table-body">
+                        <tr>
+                            <td colspan="3" class="empty-state">Loading copies…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </dialog>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+
+</html>

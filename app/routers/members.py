@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -74,7 +74,7 @@ def create_member(
     return member
 
 
-# List members with search and pagination
+# List members with name/ID search and pagination
 @router.get("/", response_model=list[MemberResponse])
 def list_members(
     db: DatabaseSession,
@@ -85,8 +85,17 @@ def list_members(
 ):
     query = select(Member)
 
-    if search:
-        query = query.where(Member.full_name.ilike(f"%{search}%"))
+    if search and search.strip():
+        term = search.strip()
+
+        conditions = [
+            Member.full_name.ilike(f"%{term}%"),
+        ]
+
+        if term.isdigit():
+            conditions.append(Member.id == int(term))
+
+        query = query.where(or_(*conditions))
 
     query = query.order_by(Member.id).offset(skip).limit(limit)
 
@@ -206,7 +215,7 @@ def update_member_status(
     return member
 
 
-# Delete a member
+# Delete a member only if they have no borrowing history
 @router.delete(
     "/{member_id}",
     status_code=status.HTTP_204_NO_CONTENT,

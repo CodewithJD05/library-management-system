@@ -18,12 +18,24 @@ from app.routers.fines import router as fines_router
 from app.routers.members import router as members_router
 from app.routers.staff import router as staff_router
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title=settings.app_name,
     description="Backend API for managing library operations.",
     version="1.0.0",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+)
 
 app.include_router(auth_router)
 app.include_router(books_router)

@@ -2,7 +2,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -60,6 +60,8 @@ def create_book(
     return book
 
 
+
+
 @router.get("/", response_model=list[BookResponse])
 def list_books(
     db: DatabaseSession,
@@ -71,15 +73,30 @@ def list_books(
 ):
     statement = select(Book)
 
-    if search:
-        statement = statement.where(Book.title.ilike(f"%{search}%"))
+    if search and search.strip():
+        term = search.strip()
+
+        conditions = [
+            Book.title.ilike(f"%{term}%"),
+            Book.isbn.ilike(f"%{term}%"),
+        ]
+
+        statement = statement.where(or_(*conditions))
 
     if published_year is not None:
-        statement = statement.where(Book.published_year == published_year)
+        statement = statement.where(
+            Book.published_year == published_year
+        )
 
-    statement = statement.order_by(Book.id).offset(skip).limit(limit)
+    statement = (
+        statement
+        .order_by(Book.id)
+        .offset(skip)
+        .limit(limit)
+    )
 
     return db.scalars(statement).all()
+
 
 
 @router.get("/{book_id}", response_model=BookResponse)
