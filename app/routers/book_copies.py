@@ -1,7 +1,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.book import Book
 from app.models.book_copy import BookCopy
+from app.models.borrowing import Borrowing
 from app.models.staff_user import StaffUser
 from app.routers.auth import get_current_staff_user
 from app.schemas.book_copy import BookCopyCreate, BookCopyResponse
@@ -92,3 +93,56 @@ def list_book_copies(
     )
 
     return db.scalars(query).all()
+
+
+@router.delete(
+    "/{book_id}/copies/{copy_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_book_copy(
+    book_id: int,
+    copy_id: int,
+    db: DatabaseSession,
+    current_user: CurrentStaff,
+):
+    book_copy = db.scalar(
+        select(BookCopy)
+        .where(
+            BookCopy.id == copy_id,
+            BookCopy.book_id == book_id,
+        )
+        .with_for_update()
+    )
+
+    if book_copy is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book copy not found",
+        )
+
+    has_borrowing_history = db.scalar(
+        select(Borrowing.id)
+        .where(Borrowing.book_copy_id == copy_id)
+        .limit(1)
+    )
+
+    if has_borrowing_history is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This copy cannot be deleted because it has borrowing "
+                "history. Keep the record to preserve library history."
+            ),
+        )
+
+    try:
+        db.delete(book_copy)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This copy cannot be deleted because it is referenced by other records.",
+        ) from None
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

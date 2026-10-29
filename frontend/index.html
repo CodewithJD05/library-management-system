@@ -104,6 +104,7 @@
                         <p class="eyebrow">OVERVIEW</p>
                         <h1>Dashboard</h1>
                     </div>
+
                     <div class="topbar-right">
                         <span class="live-label"><span></span> Admin workspace</span>
                         <div class="avatar">A</div>
@@ -116,6 +117,7 @@
                         <h2>Everything at a glance.</h2>
                         <p>Monitor your catalogue, members, loans, and overdue activity.</p>
                     </div>
+
                     <div class="welcome-mark">L<span>OS</span></div>
                 </section>
 
@@ -124,6 +126,7 @@
                         <h2>Library overview</h2>
                         <p>Your key operational metrics</p>
                     </div>
+
                     <span class="period-label">CURRENT SNAPSHOT</span>
                 </section>
 
@@ -176,6 +179,7 @@
                                 <h2>Quick actions</h2>
                                 <p>Common library operations</p>
                             </div>
+
                             <span class="panel-symbol">↗</span>
                         </div>
 
@@ -224,6 +228,7 @@
                                 <h2>System status</h2>
                                 <p>Connection checks</p>
                             </div>
+
                             <span class="system-symbol">⌘</span>
                         </div>
 
@@ -270,6 +275,7 @@
                         <p class="eyebrow">CATALOGUE MANAGEMENT</p>
                         <h1>Books &amp; Copies</h1>
                     </div>
+
                     <div class="topbar-right">
                         <span class="live-label"><span></span> Admin workspace</span>
                         <div class="avatar">A</div>
@@ -281,6 +287,7 @@
                         <h2>Manage your collection</h2>
                         <p>Search titles, maintain catalogue records, and manage individual copies.</p>
                     </div>
+
                     <button id="show-add-book" class="primary-button" type="button">
                         + Add book
                     </button>
@@ -291,6 +298,7 @@
                         <span>Total titles</span>
                         <strong id="books-count">—</strong>
                     </article>
+
                     <article class="mini-stat">
                         <span>Physical copies shown</span>
                         <strong id="copies-count">—</strong>
@@ -332,9 +340,10 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
+
                             <tbody id="books-table-body">
                                 <tr>
-                                    <td colspan="5" class="empty-state">Loading books…</td>
+                                    <td colspan="6" class="empty-state">Loading books…</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -366,6 +375,7 @@
                         <p class="eyebrow">MEMBER MANAGEMENT</p>
                         <h1>Members</h1>
                     </div>
+
                     <div class="topbar-right">
                         <span class="live-label"><span></span> Admin workspace</span>
                         <div class="avatar">A</div>
@@ -377,6 +387,7 @@
                         <h2>Manage library members</h2>
                         <p>Maintain member records, manage account status, and review borrowing history.</p>
                     </div>
+
                     <button id="show-add-member" class="primary-button" type="button">
                         + Add member
                     </button>
@@ -387,6 +398,7 @@
                         <span>Members on this page</span>
                         <strong id="members-count">—</strong>
                     </article>
+
                     <article class="mini-stat">
                         <span>Active members on this page</span>
                         <strong id="active-members-count">—</strong>
@@ -429,9 +441,10 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
+
                             <tbody id="members-table-body">
                                 <tr>
-                                    <td colspan="6" class="empty-state">Members will load here.</td>
+                                    <td colspan="7" class="empty-state">Members will load here.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -455,158 +468,153 @@
                     <span>Members</span>
                 </footer>
             </section>
-         
-<!-- Borrowings page -->
-<section id="borrowings-page" class="app-page" hidden>
-    <header class="topbar">
-        <div>
-            <p class="eyebrow">CIRCULATION MANAGEMENT</p>
-            <h1>Borrowings</h1>
-        </div>
-        <div class="topbar-right">
-            <span class="live-label"><span></span> Admin workspace</span>
-            <div class="avatar">A</div>
-        </div>
-    </header>
 
-    <section class="page-intro">
-        <div>
-            <h2>Manage book loans</h2>
-            <p>Issue books, review active loans, identify overdue books, and process returns.</p>
-        </div>
-        <div class="page-actions">
-            <button id="show-issue-book" class="primary-button" type="button">
-                + Issue Book
-            </button>
-            <button id="refresh-borrowings" class="secondary-button" type="button">
-                Refresh
-            </button>
-        </div>
-    </section>
+            <!-- Borrowings page -->
+            <section id="borrowings-page" class="app-page" hidden>
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">CIRCULATION MANAGEMENT</p>
+                        <h1>Borrowings</h1>
+                    </div>
 
-    <section class="book-summary-grid">
-        <article class="mini-stat">
-            <span>Records shown</span>
-            <strong id="borrowings-count">—</strong>
-        </article>
-        <article class="mini-stat">
-            <span>Overdue loans</span>
-            <strong id="overdue-borrowings-count">—</strong>
-        </article>
-    </section>
+                    <div class="topbar-right">
+                        <span class="live-label"><span></span> Admin workspace</span>
+                        <div class="avatar">A</div>
+                    </div>
+                </header>
 
-    <section class="panel catalogue-panel">
-        <div class="catalogue-toolbar">
-            <div>
-                <h2>Borrowing records</h2>
-                <p>Track issue dates, due dates, and returns.</p>
-            </div>
-            <div class="search-form">
-                <select id="borrowing-filter" aria-label="Filter borrowing records">
-                    <option value="all">All records</option>
-                    <option value="active">Active loans</option>
-                    <option value="overdue">Overdue loans</option>
-                </select>
-            </div>
-        </div>
+                <section class="page-intro">
+                    <div>
+                        <h2>Manage book loans</h2>
+                        <p>Issue books, review active loans, identify overdue books, and process returns.</p>
+                    </div>
 
-        <p id="borrowings-message" class="page-message" role="status"></p>
+                    <div class="page-actions">
+                        <button id="show-issue-book" class="primary-button" type="button">
+                            + Issue Book
+                        </button>
+                        <button id="refresh-borrowings" class="secondary-button" type="button">
+                            Refresh
+                        </button>
+                    </div>
+                </section>
 
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Loan ID</th>
-                        <th>Member ID</th>
-                        <th>Copy ID</th>
-                        <th>Borrowed</th>
-                        <th>Due date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="borrowings-table-body">
-                    <tr>
-                        <td colspan="7" class="empty-state">
-                            Borrowing records will load here.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                <section class="book-summary-grid">
+                    <article class="mini-stat">
+                        <span>Records shown</span>
+                        <strong id="borrowings-count">—</strong>
+                    </article>
 
-        <div class="pagination">
-            <span id="borrowings-pagination-info">Page 1</span>
-            <div>
-                <button id="previous-borrowings-page"
-                    class="secondary-button" type="button">
-                    Previous
-                </button>
-                <button id="next-borrowings-page"
-                    class="secondary-button" type="button">
-                    Next
-                </button>
-            </div>
-        </div>
-    </section>
+                    <article class="mini-stat">
+                        <span>Overdue loans</span>
+                        <strong id="overdue-borrowings-count">—</strong>
+                    </article>
+                </section>
 
-    <footer class="page-footer">
-        <span>LibraryOS <span class="footer-dot">•</span> Management Console</span>
-        <span>Borrowings</span>
-    </footer>
-</section>
+                <section class="panel catalogue-panel">
+                    <div class="catalogue-toolbar">
+                        <div>
+                            <h2>Borrowing records</h2>
+                            <p>Track issue dates, due dates, and returns.</p>
+                        </div>
 
-<!-- Issue book dialog -->
-<dialog id="issue-book-dialog" class="app-dialog">
-    <form id="issue-book-form" class="dialog-form">
-        <div class="dialog-heading">
-            <div>
-                <p class="eyebrow">CIRCULATION MANAGEMENT</p>
-                <h2>Issue a book</h2>
-            </div>
-            <button
-                type="button"
-                class="icon-button"
-                data-close-dialog="issue-book-dialog"
-                aria-label="Close"
-            >
-                ×
-            </button>
-        </div>
+                        <div class="search-form">
+                            <select id="borrowing-filter" aria-label="Filter borrowing records">
+                                <option value="all">All records</option>
+                                <option value="active">Active loans</option>
+                                <option value="overdue">Overdue loans</option>
+                            </select>
+                        </div>
+                    </div>
 
-        <p>Select an active member and an available physical copy.</p>
+                    <p id="borrowings-message" class="page-message" role="status"></p>
 
-        <label for="issue-member">Member *</label>
-        <select id="issue-member" name="member_id" required>
-            <option value="">Select a member</option>
-        </select>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Loan ID</th>
+                                    <th>Member ID</th>
+                                    <th>Copy ID</th>
+                                    <th>Borrowed</th>
+                                    <th>Due date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
 
-        <label for="issue-book-copy">Available book copy *</label>
-        <select id="issue-book-copy" name="book_copy_id" required>
-            <option value="">Select an available copy</option>
-        </select>
+                            <tbody id="borrowings-table-body">
+                                <tr>
+                                    <td colspan="7" class="empty-state">
+                                        Borrowing records will load here.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-        <p id="issue-book-error" class="form-error" role="alert"></p>
+                    <div class="pagination">
+                        <span id="borrowings-pagination-info">Page 1</span>
+                        <div>
+                            <button id="previous-borrowings-page" class="secondary-button" type="button">
+                                Previous
+                            </button>
+                            <button id="next-borrowings-page" class="secondary-button" type="button">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </section>
 
-        <div class="dialog-actions">
-            <button
-                type="button"
-                id="cancel-issue-book"
-                class="secondary-button"
-            >
-                Cancel
-            </button>
-            <button
-                type="submit"
-                id="save-issue-book"
-                class="primary-button"
-            >
-                Issue book
-            </button>
-        </div>
-    </form>
-</dialog>
+                <footer class="page-footer">
+                    <span>LibraryOS <span class="footer-dot">•</span> Management Console</span>
+                    <span>Borrowings</span>
+                </footer>
+            </section>
 
+            <!-- Issue book dialog -->
+            <dialog id="issue-book-dialog" class="app-dialog">
+                <form id="issue-book-form" class="dialog-form">
+                    <div class="dialog-heading">
+                        <div>
+                            <p class="eyebrow">CIRCULATION MANAGEMENT</p>
+                            <h2>Issue a book</h2>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="icon-button"
+                            data-close-dialog="issue-book-dialog"
+                            aria-label="Close"
+                        >
+                            ×
+                        </button>
+                    </div>
+
+                    <p>Select an active member and an available physical copy.</p>
+
+                    <label for="issue-member">Member *</label>
+                    <select id="issue-member" name="member_id" required>
+                        <option value="">Select a member</option>
+                    </select>
+
+                    <label for="issue-book-copy">Available book copy *</label>
+                    <select id="issue-book-copy" name="book_copy_id" required>
+                        <option value="">Select an available copy</option>
+                    </select>
+
+                    <p id="issue-book-error" class="form-error" role="alert"></p>
+
+                    <div class="dialog-actions">
+                        <button type="button" id="cancel-issue-book" class="secondary-button">
+                            Cancel
+                        </button>
+                        <button type="submit" id="save-issue-book" class="primary-button">
+                            Issue book
+                        </button>
+                    </div>
+                </form>
+            </dialog>
 
             <!-- Fines and payments page -->
             <section id="fines-page" class="app-page" hidden>
@@ -615,6 +623,7 @@
                         <p class="eyebrow">FINANCIAL MANAGEMENT</p>
                         <h1>Fines &amp; Payments</h1>
                     </div>
+
                     <div class="topbar-right">
                         <span class="live-label"><span></span> Admin workspace</span>
                         <div class="avatar">A</div>
@@ -626,6 +635,7 @@
                         <h2>Manage library fines</h2>
                         <p>Review outstanding fines, track payments, and monitor collected amounts.</p>
                     </div>
+
                     <button id="refresh-fines" class="secondary-button" type="button">
                         Refresh
                     </button>
@@ -679,6 +689,7 @@
                             <h2>Fine records</h2>
                             <p>Review unpaid and settled fines.</p>
                         </div>
+
                         <div class="search-form">
                             <select id="fine-filter" aria-label="Filter fines">
                                 <option value="all">All fines</option>
@@ -702,6 +713,7 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
+
                             <tbody id="fines-table-body">
                                 <tr>
                                     <td colspan="7" class="empty-state">Fine records will load here.</td>
@@ -736,6 +748,7 @@
                         <p class="eyebrow">ACCESS MANAGEMENT</p>
                         <h1>Staff Management</h1>
                     </div>
+
                     <div class="topbar-right">
                         <span class="live-label"><span></span> Admin workspace</span>
                         <div class="avatar">A</div>
@@ -763,6 +776,7 @@
                         <span>Staff records shown</span>
                         <strong id="staff-count">—</strong>
                     </article>
+
                     <article class="mini-stat">
                         <span>Active accounts shown</span>
                         <strong id="active-staff-count">—</strong>
@@ -791,6 +805,7 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
+
                             <tbody id="staff-table-body">
                                 <tr>
                                     <td colspan="6" class="empty-state">Staff records will load here.</td>
@@ -802,20 +817,10 @@
                     <div class="pagination">
                         <span id="staff-pagination-info">Page 1</span>
                         <div>
-                            <button
-                                id="previous-staff-page"
-                                class="secondary-button"
-                                type="button"
-                                disabled
-                            >
+                            <button id="previous-staff-page" class="secondary-button" type="button" disabled>
                                 Previous
                             </button>
-                            <button
-                                id="next-staff-page"
-                                class="secondary-button"
-                                type="button"
-                                disabled
-                            >
+                            <button id="next-staff-page" class="secondary-button" type="button" disabled>
                                 Next
                             </button>
                         </div>
@@ -838,12 +843,8 @@
                     <p class="eyebrow">ACCESS MANAGEMENT</p>
                     <h2 id="staff-dialog-title">Create Staff Account</h2>
                 </div>
-                <button
-                    type="button"
-                    id="close-staff-dialog"
-                    class="icon-button"
-                    aria-label="Close"
-                >
+
+                <button type="button" id="close-staff-dialog" class="icon-button" aria-label="Close">
                     ×
                 </button>
             </div>
@@ -878,6 +879,7 @@
                 autocomplete="new-password"
                 required
             >
+
             <small>
                 Use at least 12 characters. When editing, leave blank to keep
                 the existing password.
@@ -892,11 +894,7 @@
             <p id="staff-form-error" class="form-error" role="alert"></p>
 
             <div class="dialog-actions">
-                <button
-                    type="button"
-                    class="secondary-button"
-                    id="cancel-staff-dialog"
-                >
+                <button type="button" class="secondary-button" id="cancel-staff-dialog">
                     Cancel
                 </button>
                 <button id="save-staff-button" type="submit" class="primary-button">
@@ -914,6 +912,7 @@
                     <p class="eyebrow">CIRCULATION MANAGEMENT</p>
                     <h2>Extend due date</h2>
                 </div>
+
                 <button
                     type="button"
                     class="icon-button"
@@ -932,11 +931,7 @@
             <p id="due-date-error" class="form-error" role="alert"></p>
 
             <div class="dialog-actions">
-                <button
-                    type="button"
-                    class="secondary-button"
-                    data-close-dialog="due-date-dialog"
-                >
+                <button type="button" class="secondary-button" data-close-dialog="due-date-dialog">
                     Cancel
                 </button>
                 <button id="save-due-date" class="primary-button" type="submit">
@@ -954,6 +949,7 @@
                     <p class="eyebrow">MEMBER RECORD</p>
                     <h2 id="member-dialog-title">Add a member</h2>
                 </div>
+
                 <button
                     type="button"
                     class="icon-button"
@@ -965,40 +961,18 @@
             </div>
 
             <label for="member-name">Full name *</label>
-            <input
-                id="member-name"
-                name="full_name"
-                maxlength="150"
-                autocomplete="name"
-                required
-            >
+            <input id="member-name" name="full_name" maxlength="150" autocomplete="name" required>
 
             <label for="member-email">Email address *</label>
-            <input
-                id="member-email"
-                name="email"
-                type="email"
-                autocomplete="email"
-                required
-            >
+            <input id="member-email" name="email" type="email" autocomplete="email" required>
 
             <label for="member-phone">Phone</label>
-            <input
-                id="member-phone"
-                name="phone"
-                type="tel"
-                maxlength="20"
-                autocomplete="tel"
-            >
+            <input id="member-phone" name="phone" type="tel" maxlength="20" autocomplete="tel">
 
             <p id="member-form-error" class="form-error" role="alert"></p>
 
             <div class="dialog-actions">
-                <button
-                    type="button"
-                    class="secondary-button"
-                    data-close-dialog="member-dialog"
-                >
+                <button type="button" class="secondary-button" data-close-dialog="member-dialog">
                     Cancel
                 </button>
                 <button id="save-member-button" class="primary-button" type="submit">
@@ -1017,6 +991,7 @@
                     <h2 id="member-history-title">Borrowing history</h2>
                     <p id="member-history-subtitle" class="dialog-subtitle"></p>
                 </div>
+
                 <button
                     type="button"
                     class="icon-button"
@@ -1040,6 +1015,7 @@
                             <th>Returned</th>
                         </tr>
                     </thead>
+
                     <tbody id="member-history-table-body">
                         <tr>
                             <td colspan="5" class="empty-state">Loading history…</td>
@@ -1058,6 +1034,7 @@
                     <p class="eyebrow">CATALOGUE</p>
                     <h2>Add a book</h2>
                 </div>
+
                 <button
                     type="button"
                     class="icon-button"
@@ -1095,11 +1072,7 @@
             <p id="add-book-error" class="form-error" role="alert"></p>
 
             <div class="dialog-actions">
-                <button
-                    type="button"
-                    class="secondary-button"
-                    data-close-dialog="add-book-dialog"
-                >
+                <button type="button" class="secondary-button" data-close-dialog="add-book-dialog">
                     Cancel
                 </button>
                 <button id="save-book-button" class="primary-button" type="submit">
@@ -1107,46 +1080,71 @@
                 </button>
             </div>
         </form>
-    </dialog>    
+    </dialog>
+
     <!-- Edit book dialog -->
-<dialog id="edit-book-dialog" class="form-dialog">
-    <div class="dialog-header">
-        <div>
-            <p class="dialog-eyebrow">BOOK RECORD</p>
-            <h2>Edit book</h2>
-        </div>
-        <button type="button" id="close-edit-book" class="icon-button" aria-label="Close">
-            &times;
-        </button>
-    </div>
+    <dialog id="edit-book-dialog" class="app-dialog">
+        <form id="edit-book-form" class="dialog-form">
+            <div class="dialog-heading">
+                <div>
+                    <p class="eyebrow">BOOK RECORD</p>
+                    <h2>Edit book</h2>
+                    <p class="dialog-subtitle">
+                        Update the book's catalogue information.
+                    </p>
+                </div>
 
-    <form id="edit-book-form">
-        <p id="edit-book-error" class="form-error" role="alert"></p>
+                <button type="button" id="close-edit-book" class="icon-button" aria-label="Close">
+                    &times;
+                </button>
+            </div>
 
-        <label for="edit-book-title">Book title *</label>
-        <input id="edit-book-title" name="title" type="text" maxlength="200" required>
+            <p id="edit-book-error" class="form-error" role="alert"></p>
 
-        <label for="edit-book-isbn">ISBN *</label>
-        <input id="edit-book-isbn" name="isbn" type="text" maxlength="20" required>
+            <label for="edit-book-title">Book title *</label>
+            <input
+                id="edit-book-title"
+                name="title"
+                type="text"
+                maxlength="200"
+                autocomplete="off"
+                required
+            >
 
-        <label for="edit-book-year">Published year</label>
-        <input id="edit-book-year" name="published_year" type="number" min="1" max="9999">
+            <label for="edit-book-isbn">ISBN *</label>
+            <input
+                id="edit-book-isbn"
+                name="isbn"
+                type="text"
+                maxlength="20"
+                autocomplete="off"
+                required
+            >
 
-        <label for="edit-book-description">Description</label>
-        <textarea id="edit-book-description" name="description" rows="3"></textarea>
+            <label for="edit-book-year">Published year</label>
+            <input
+                id="edit-book-year"
+                name="published_year"
+                type="number"
+                min="1"
+                max="9999"
+            >
 
-        <div class="dialog-actions">
-            <button type="button" id="cancel-edit-book" class="secondary-button">
-                Cancel
-            </button>
-            <button type="submit" id="save-edit-book" class="primary-button">
-                Save changes
-            </button>
-        </div>
-    </form>
-</dialog>
+            <label for="edit-book-description">Description</label>
+            <textarea id="edit-book-description" name="description" rows="4"></textarea>
 
-    <!-- Physical copies dialog -->
+            <div class="dialog-actions">
+                <button type="button" id="cancel-edit-book" class="secondary-button">
+                    Cancel
+                </button>
+                <button type="submit" id="save-edit-book" class="primary-button">
+                    Save changes
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Book copies dialog -->
     <dialog id="copies-dialog" class="app-dialog copies-dialog">
         <div class="dialog-form">
             <div class="dialog-heading">
@@ -1155,18 +1153,20 @@
                     <h2 id="copies-dialog-title">Physical copies</h2>
                     <p id="copies-dialog-subtitle" class="dialog-subtitle"></p>
                 </div>
+
                 <button
                     type="button"
                     class="icon-button"
                     data-close-dialog="copies-dialog"
                     aria-label="Close"
                 >
-                    ×
+                    &times;
                 </button>
             </div>
 
             <form id="add-copy-form" class="add-copy-form">
                 <label for="new-copy-barcode">New copy barcode</label>
+
                 <div class="inline-form">
                     <input
                         id="new-copy-barcode"
@@ -1175,10 +1175,12 @@
                         placeholder="e.g. LIB-BOOK-001"
                         required
                     >
+
                     <button id="add-copy-button" class="primary-button" type="submit">
                         Add copy
                     </button>
                 </div>
+
                 <p id="add-copy-error" class="form-error" role="alert"></p>
             </form>
 
@@ -1191,11 +1193,13 @@
                             <th>Copy ID</th>
                             <th>Barcode</th>
                             <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody id="copies-table-body">
                         <tr>
-                            <td colspan="3" class="empty-state">Loading copies…</td>
+                            <td colspan="4" class="empty-state">Loading copies…</td>
                         </tr>
                     </tbody>
                 </table>

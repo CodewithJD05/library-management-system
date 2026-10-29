@@ -25,12 +25,13 @@ export async function apiRequest(path, options = {}) {
     headers.set("Authorization", `Bearer ${token}`);
 
     if (
-        options.body &&
+        options.body !== undefined &&
+        options.body !== null &&
         !(options.body instanceof FormData) &&
         !headers.has("Content-Type")
     ) {
-        headers.set("Content-Type", "application/json");    }   
-    let response;
+        headers.set("Content-Type", "application/json");
+    }
 
     const requestOptions = {
         ...options,
@@ -42,12 +43,13 @@ export async function apiRequest(path, options = {}) {
         options.body !== null &&
         !(options.body instanceof FormData)
     ) {
-        if (typeof options.body === "string") {
-            requestOptions.body = options.body;
-        } else {
-            requestOptions.body = JSON.stringify(options.body);
-        }
+        requestOptions.body =
+            typeof options.body === "string"
+                ? options.body
+                : JSON.stringify(options.body);
     }
+
+    let response;
 
     try {
         response = await fetch(
@@ -61,32 +63,45 @@ export async function apiRequest(path, options = {}) {
             "Could not connect to FastAPI. Check that the backend is running."
         );
     }
-if (response.status === 401) {
+
+    if (response.status === 401) {
         clearToken();
-    window.dispatchEvent(new Event("auth-required"));
-    throw new Error("Your session has expired. Please sign in again.");
-}
+        window.dispatchEvent(new Event("auth-required"));
+        throw new Error("Your session has expired. Please sign in again.");
+    }
 
-if (response.status === 403) {
-    const error = new Error(
-        "You are not authorized to access this page."
-    );
+    if (response.status === 403) {
+        const error = new Error(
+            "You are not authorized to access this page."
+        );
 
-    window.dispatchEvent(
-        new CustomEvent("authorization-denied", {
-            detail: { message: error.message },
-        })
-    );
+        window.dispatchEvent(
+            new CustomEvent("authorization-denied", {
+                detail: { message: error.message },
+            })
+        );
 
-    throw error;
-}
+        throw error;
+    }
 
-
+    // Read the response body once. A successful DELETE may have no body.
+    const responseText = await response.text();
     let data = null;
-    const contentType = response.headers.get("content-type") || "";
 
-    if (contentType.includes("application/json")) {
-        data = await response.json();
+    if (responseText.trim()) {
+        const contentType = response.headers.get("content-type") || "";
+
+        if (contentType.includes("application/json")) {
+            try {
+                data = JSON.parse(responseText);
+            } catch {
+                if (response.ok) {
+                    throw new Error("The server returned invalid JSON.");
+                }
+            }
+        } else {
+            data = responseText;
+        }
     }
 
     if (!response.ok) {

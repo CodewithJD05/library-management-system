@@ -121,7 +121,6 @@ function renderBooks(books) {
 
     if (books.length === 0) {
         makeEmptyRow(booksTableBody, 6, "No books found.");
-        copiesCount.textContent = "0";
         return;
     }
 
@@ -180,7 +179,7 @@ function renderBooks(books) {
             openCopiesDialog(book);
         });
 
-        // Delete button
+        // Delete book button
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
         deleteButton.className = "table-button";
@@ -195,6 +194,7 @@ function renderBooks(books) {
             if (!confirmed) return;
 
             deleteButton.disabled = true;
+            deleteButton.textContent = "Deleting…";
 
             try {
                 await apiRequest(`/books/${book.id}`, {
@@ -207,12 +207,24 @@ function renderBooks(books) {
                     "success"
                 );
 
+                // If the last item on a page was deleted, move back one page.
+                if (
+                    catalogueState.skip > 0 &&
+                    catalogueState.currentPageCount === 1
+                ) {
+                    catalogueState.skip = Math.max(
+                        0,
+                        catalogueState.skip - PAGE_SIZE
+                    );
+                }
+
                 await loadBooks();
                 await refreshDashboard();
             } catch (error) {
                 setMessage(booksMessage, error.message, "error");
             } finally {
                 deleteButton.disabled = false;
+                deleteButton.textContent = "Delete";
             }
         });
 
@@ -225,8 +237,6 @@ function renderBooks(books) {
         row.appendChild(actionsCell);
         booksTableBody.appendChild(row);
     });
-
-    copiesCount.textContent = "—";
 }
 
 // Search by title or ISBN.
@@ -410,7 +420,7 @@ async function openCopiesDialog(book) {
     addCopyForm.reset();
     addCopyError.textContent = "";
     setMessage(copiesMessage, "");
-    makeEmptyRow(copiesTableBody, 3, "Loading copies…");
+    makeEmptyRow(copiesTableBody, 4, "Loading copies…");
 
     copiesDialog.showModal();
     await loadCopies(book.id);
@@ -429,7 +439,7 @@ async function loadCopies(bookId) {
         if (copies.length === 0) {
             makeEmptyRow(
                 copiesTableBody,
-                3,
+                4,
                 "No physical copies have been added yet."
             );
         } else {
@@ -443,23 +453,68 @@ async function loadCopies(bookId) {
                 statusCell.appendChild(createStatusBadge(copy.status));
                 row.appendChild(statusCell);
 
+                const actionsCell = document.createElement("td");
+                const deleteButton = document.createElement("button");
+
+                deleteButton.type = "button";
+                deleteButton.className = "table-button";
+                deleteButton.textContent = "Delete";
+
+                deleteButton.addEventListener("click", async () => {
+                    const confirmed = window.confirm(
+                        `Delete physical copy "${copy.barcode}" (ID: ${copy.id})?\n\n` +
+                        "Copies with borrowing history cannot be deleted."
+                    );
+
+                    if (!confirmed) return;
+
+                    deleteButton.disabled = true;
+                    deleteButton.textContent = "Deleting…";
+
+                    try {
+                        await apiRequest(
+                            `/books/${bookId}/copies/${copy.id}`,
+                            { method: "DELETE" }
+                        );
+
+                        await loadCopies(bookId);
+                        await loadBooks();
+                        await refreshDashboard();
+
+                        setMessage(
+                            copiesMessage,
+                            `Physical copy "${copy.barcode}" deleted successfully.`,
+                            "success"
+                        );
+                    } catch (error) {
+                        setMessage(copiesMessage, error.message, "error");
+                        deleteButton.disabled = false;
+                        deleteButton.textContent = "Delete";
+                    }
+                });
+
+                actionsCell.appendChild(deleteButton);
+                row.appendChild(actionsCell);
                 copiesTableBody.appendChild(row);
             });
         }
-
-        copiesCount.textContent = copies.length.toLocaleString();
 
         setMessage(
             copiesMessage,
             `${copies.length} physical copy/copies found.`
         );
     } catch (error) {
-        makeEmptyRow(copiesTableBody, 3, "Could not load physical copies.");
+        makeEmptyRow(
+            copiesTableBody,
+            4,
+            "Could not load physical copies."
+        );
         setMessage(copiesMessage, error.message, "error");
         console.error("Loading copies failed:", error);
     }
 }
 
+// Add physical copy
 addCopyForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
@@ -483,6 +538,7 @@ addCopyForm.addEventListener("submit", async (event) => {
         addCopyForm.reset();
 
         await loadCopies(bookId);
+        await loadBooks();
         await refreshDashboard();
 
         setMessage(
