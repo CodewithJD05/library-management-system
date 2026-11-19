@@ -21,6 +21,9 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.fines import router as fines_router
 from app.routers.members import router as members_router
 from app.routers.staff import router as staff_router
+from app.routers.reservations import router as reservations_router
+from app.routers.holidays import router as holidays_router
+from app.routers.notifications import router as notifications_router
 
 
 logging.basicConfig(
@@ -55,6 +58,9 @@ app.include_router(book_copies_router)
 app.include_router(fines_router)
 app.include_router(dashboard_router)
 app.include_router(staff_router)
+app.include_router(reservations_router)
+app.include_router(holidays_router)
+app.include_router(notifications_router)
 
 
 @app.exception_handler(Exception)

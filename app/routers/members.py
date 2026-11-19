@@ -8,6 +8,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.services.fines import borrowing_with_fine
+from app.models.reservation import Reservation
 from app.models.borrowing import Borrowing
 from app.models.member import Member
 from app.models.staff_user import StaffUser
@@ -130,7 +132,7 @@ def get_member_borrowing_history(
         .limit(limit)
     )
 
-    return db.scalars(query).all()
+    return [borrowing_with_fine(db, b) for b in db.scalars(query).all()]
 
 
 # Get a member by ID
@@ -245,5 +247,8 @@ def delete_member(
             detail="Cannot delete a member with borrowing history",
         )
 
+    has_reservation = db.scalar(select(Reservation.id).where(Reservation.member_id == member_id).limit(1))
+    if has_reservation is not None:
+        raise HTTPException(status_code=409, detail="Cannot delete a member with reservation history")
     db.delete(member)
     db.commit()

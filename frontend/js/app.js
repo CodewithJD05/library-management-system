@@ -2,9 +2,13 @@
 "use strict";
 
 import { API_BASE_URL } from "./config.js";
-import { getToken } from "./api.js";
+import { getToken, getRefreshToken, apiRequest } from "./api.js";
 import { showLogin, showApplication } from "./auth.js";
 import { loadDashboardSummary } from "./dashboard.js";
+import { loadReservations } from "./reservations.js";
+import { loadHolidays } from "./holidays.js";
+import { loadSessions } from "./sessions.js";
+import { loadNotifications } from "./notifications.js";
 
 import {
     loadBooks,
@@ -48,6 +52,10 @@ const membersPage = document.getElementById("members-page");
 const borrowingsPage = document.getElementById("borrowings-page");
 const finesPage = document.getElementById("fines-page");
 const staffPage = document.getElementById("staff-page");
+const reservationsPage = document.getElementById("reservations-page");
+const holidaysPage = document.getElementById("holidays-page");
+const sessionsPage = document.getElementById("sessions-page");
+const notificationsPage = document.getElementById("notifications-page");
 
 // ---------- API health ----------
 
@@ -115,6 +123,10 @@ const pages = {
     Borrowings: borrowingsPage,
     Fines: finesPage,
     Staff: staffPage,
+    Reservations: reservationsPage,
+    Holidays: holidaysPage,
+    Sessions: sessionsPage,
+    Notifications: notificationsPage,
 };
 
 async function navigateTo(pageName) {
@@ -163,6 +175,18 @@ async function navigateTo(pageName) {
             case "Staff":
                 await loadStaff();
                 break;
+            case "Reservations":
+                await loadReservations();
+                break;
+            case "Holidays":
+                await loadHolidays();
+                break;
+            case "Sessions":
+                await loadSessions();
+                break;
+            case "Notifications":
+                await loadNotifications();
+                break;
 
             default:
                 console.warn(`No loader configured for "${pageName}".`);
@@ -206,11 +230,26 @@ setBorrowingsDashboardRefresh(loadDashboardSummary);
 setFinesDashboardRefresh(loadDashboardSummary);
 setStaffDashboardRefresh(loadDashboardSummary);
 
+// ---------- Role-specific navigation ----------
+async function updateVisibleNavigation() {
+    const actor = await apiRequest("/auth/me");
+    window.currentStaff = actor;
+    document.querySelectorAll('[data-page="Staff"]').forEach(node => {
+        node.hidden = !["admin", "super_admin"].includes(actor.role);
+    });
+    for (const page of ["Holidays", "Notifications"]) {
+        document.querySelectorAll(`[data-page="${page}"]`).forEach(node => {
+            node.hidden = !["admin", "super_admin"].includes(actor.role);
+        });
+    }
+    return actor;
+}
+
 // ---------- Login success ----------
 
 window.addEventListener("login-success", async () => {
     showApplication();
-
+    try { await updateVisibleNavigation(); } catch (e) { console.warn(e); }
     await loadDashboardSummary();
     await loadBooks();
 });
@@ -237,9 +276,10 @@ async function initializeApplication() {
         return;
     }
 
-    if (getToken()) {
+    if (getToken() || getRefreshToken()) {
+        try { await updateVisibleNavigation(); }
+        catch { return; }
         showApplication();
-
         await loadDashboardSummary();
         await loadBooks();
     }

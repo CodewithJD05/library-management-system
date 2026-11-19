@@ -1,12 +1,15 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status, BackgroundTasks
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.reservation import Reservation
+from app.services.reservations import allocate_book_availability
+from app.services.notifications import email_enabled, deliver_queued_notifications
 from app.models.book import Book
 from app.models.book_copy import BookCopy
 from app.models.borrowing import Borrowing
@@ -39,6 +42,7 @@ def create_book_copy(
     copy_data: BookCopyCreate,
     db: DatabaseSession,
     current_user: CurrentStaff,
+    background_tasks: BackgroundTasks,
 ):
     book = db.get(Book, book_id)
 
@@ -57,8 +61,12 @@ def create_book_copy(
     db.add(book_copy)
 
     try:
+        db.scalar(select(Book).where(Book.id == book_id).with_for_update())
+        allocate_book_availability(db, book_id)
         db.commit()
         db.refresh(book_copy)
+        if email_enabled():
+            background_tasks.add_task(deliver_queued_notifications)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -135,6 +143,9 @@ def delete_book_copy(
             ),
         )
 
+    has_reservation_history = db.scalar(select(Reservation.id).where(Reservation.book_copy_id == copy_id).limit(1))
+    if has_reservation_history is not None:
+        raise HTTPException(status_code=409, detail="Copy has an active reservation")
     try:
         db.delete(book_copy)
         db.commit()

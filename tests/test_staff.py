@@ -89,7 +89,7 @@ def test_librarian_cannot_access_staff_management(
     assert response.status_code == 403
 
 
-def test_cannot_demote_last_active_admin(admin_client):
+def test_admin_cannot_demote_own_admin_role(admin_client):
     admin_id = next(
         user["id"]
         for user in admin_client.get("/staff/").json()
@@ -101,13 +101,10 @@ def test_cannot_demote_last_active_admin(admin_client):
         json={"role": "librarian"},
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == (
-        "Cannot remove the last active administrator"
-    )
+    assert response.status_code == 403
 
 
-def test_cannot_deactivate_last_active_admin(admin_client):
+def test_admin_cannot_deactivate_admin(admin_client):
     admin_id = next(
         user["id"]
         for user in admin_client.get("/staff/").json()
@@ -119,13 +116,10 @@ def test_cannot_deactivate_last_active_admin(admin_client):
         json={"is_active": False},
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == (
-        "Cannot remove the last active administrator"
-    )
+    assert response.status_code == 403
 
 
-def test_admin_can_demote_admin_when_another_active_admin_exists(
+def test_admin_cannot_demote_admin_even_if_another_exists(
     admin_client,
     db_session,
 ):
@@ -151,8 +145,7 @@ def test_admin_can_demote_admin_when_another_active_admin_exists(
         json={"role": "librarian"},
     )
 
-    assert response.status_code == 200
-    assert response.json()["role"] == "librarian"
+    assert response.status_code == 403
 
 
 def test_existing_token_uses_updated_staff_role(

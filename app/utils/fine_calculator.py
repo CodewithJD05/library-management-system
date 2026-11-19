@@ -1,26 +1,32 @@
+"""Billing policy: completed 24-hour overdue periods, excluding configured holiday dates."""
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
+from zoneinfo import ZoneInfo
+from app.core.config import settings
 
-from datetime import datetime, timezone
-
-DAILY_FINE_RATE = 10
+DAILY_FINE_RATE = 10  # legacy default for student members
 
 
-def calculate_fine(due_at: datetime, end_at: datetime) -> int:
-    """Calculate the fine in rupees for complete overdue days."""
+def normalize_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
-    if due_at.tzinfo is None or due_at.utcoffset() is None:
-        due_at = due_at.replace(tzinfo=timezone.utc)
-    else:
-        due_at = due_at.astimezone(timezone.utc)
 
-    if end_at.tzinfo is None or end_at.utcoffset() is None:
-        end_at = end_at.replace(tzinfo=timezone.utc)
-    else:
-        end_at = end_at.astimezone(timezone.utc)
+def fine_rate_for_category(category: str) -> Decimal:
+    return Decimal(settings.faculty_daily_fine if category == 'faculty' else settings.student_daily_fine)
 
-    overdue_seconds = (end_at - due_at).total_seconds()
 
-    if overdue_seconds <= 0:
-        return 0
+def calculate_fine(due_at: datetime, end_at: datetime, daily_rate: int | Decimal = DAILY_FINE_RATE,
+                   holidays: set[date] | None = None) -> int | Decimal:
+    """Charge each *complete* 24h overdue block if its local end date isn't a holiday.
 
-    overdue_days = int(overdue_seconds // 86400)
-    return overdue_days * DAILY_FINE_RATE
+    Dates use LIBRARY_TIMEZONE (Asia/Kolkata by default). Weekends count unless
+    explicitly added to the holidays table. Historical amounts stay fixed on Fine.
+    """
+    due_at, end_at = normalize_utc(due_at), normalize_utc(end_at)
+    completed_days = max(0, int((end_at - due_at).total_seconds() // 86400))
+    if not holidays:
+        return completed_days * daily_rate
+    tz = ZoneInfo(settings.library_timezone)
+    chargeable = sum((due_at + timedelta(days=day)).astimezone(tz).date() not in holidays
+                     for day in range(1, completed_days + 1))
+    return chargeable * daily_rate

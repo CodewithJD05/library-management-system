@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, String, Index, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -11,9 +11,10 @@ class StaffUser(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "role IN ('admin', 'librarian')",
+            "role IN ('super_admin', 'admin', 'librarian')",
             name="ck_staff_users_role",
         ),
+        Index("uq_staff_one_super_admin", "role", unique=True, postgresql_where=text("role = 'super_admin'"), sqlite_where=text("role = 'super_admin'")),
     )
 
     id: Mapped[int] = mapped_column(

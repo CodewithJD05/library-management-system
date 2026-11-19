@@ -5,7 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.core.security import create_access_token, hash_password
+from app.core.security import hash_password
+from app.routers.auth import issue_tokens
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
@@ -73,10 +74,7 @@ def authenticated_client(unauthenticated_client, db_session):
     db_session.commit()
     db_session.refresh(staff_user)
 
-    token = create_access_token(
-        subject=str(staff_user.id),
-        role=staff_user.role,
-    )
+    token = issue_tokens(db_session, staff_user).access_token
 
     unauthenticated_client.headers.update(
         {"Authorization": f"Bearer {token}"}

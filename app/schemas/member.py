@@ -1,5 +1,6 @@
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import (
     BaseModel,
@@ -21,6 +22,7 @@ class MemberCreate(BaseModel):
     full_name: str = Field(min_length=1, max_length=150)
     email: EmailStr
     phone: str | None = Field(default=None, max_length=20)
+    category: Literal["student", "faculty"] = "student"
 
 
 class MemberResponse(BaseModel):
@@ -28,6 +30,7 @@ class MemberResponse(BaseModel):
     full_name: str
     email: EmailStr
     phone: str | None
+    category: Literal["student", "faculty"]
     is_active: bool
     created_at: datetime
 
@@ -48,11 +51,12 @@ class MemberUpdate(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=150)
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=20)
+    category: Literal["student", "faculty"] | None = None
     is_active: bool | None = None
 
     @model_validator(mode="after")
     def validate_required_fields(self):
-        for field in ("full_name", "email", "is_active"):
+        for field in ("full_name", "email", "category", "is_active"):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
         return self

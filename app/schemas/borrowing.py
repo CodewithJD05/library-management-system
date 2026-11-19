@@ -1,5 +1,6 @@
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field,computed_field
 
@@ -22,10 +23,16 @@ class BorrowingResponse(BaseModel):
     due_at: datetime
     returned_at: datetime | None
 
+    daily_fine_rate: Decimal = Field(default=Decimal("10.00"), exclude=True)
+    holiday_dates: set[date] = Field(default_factory=set, exclude=True)
+    recorded_fine: Decimal | None = Field(default=None, exclude=True)
+
     model_config = ConfigDict(from_attributes=True)
 
     @computed_field
     @property
-    def fine_amount(self) -> int:
+    def fine_amount(self) -> float:
+        if self.recorded_fine is not None:
+            return float(self.recorded_fine)
         end_at = self.returned_at or datetime.now(timezone.utc)
-        return calculate_fine(self.due_at, end_at)
+        return float(calculate_fine(self.due_at, end_at, self.daily_fine_rate, self.holiday_dates))

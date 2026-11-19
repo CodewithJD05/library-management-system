@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import jwt
 from pwdlib import PasswordHash
@@ -25,6 +26,7 @@ def verify_password(
 def create_access_token(
     subject: str,
     role: str,
+    session_id: str | None = None,
 ) -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
@@ -34,6 +36,9 @@ def create_access_token(
         "sub": subject,
         "role": role,
         "exp": expires_at,
+        "type": "access",
+        "sid": session_id,
+        "jti": uuid4().hex,
     }
 
     return jwt.encode(

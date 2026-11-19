@@ -2,12 +2,18 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.book import Book
+from app.models.reservation import Reservation
+from app.services.fines import borrowing_with_fine, get_holiday_days
+from app.services.notifications import queue_email, email_enabled, deliver_queued_notifications
+from app.services.reservations import allocate_book_availability, now_utc
+from app.utils.fine_calculator import fine_rate_for_category
 from app.models.book_copy import BookCopy
 from app.models.borrowing import Borrowing
 from app.models.fine import Fine
@@ -46,9 +52,15 @@ def borrow_book(
     borrowing_data: BorrowingCreate,
     db: DatabaseSession,
     current_user: CurrentStaff,
+    background_tasks: BackgroundTasks,
 ):
     try:
-        # Lock the physical copy to prevent concurrent issue operations.
+        # Lock the title before its copies/reservations to serialize queue assignment.
+        initial_copy = db.get(BookCopy, borrowing_data.book_copy_id)
+        if initial_copy is None:
+            raise HTTPException(status_code=404, detail="Book copy not found")
+        db.scalar(select(Book).where(Book.id == initial_copy.book_id).with_for_update())
+        allocate_book_availability(db, initial_copy.book_id)
         book_copy = db.scalar(
             select(BookCopy)
             .where(BookCopy.id == borrowing_data.book_copy_id)
@@ -93,18 +105,28 @@ def borrow_book(
                 detail="This book copy is already borrowed",
             )
 
-        borrowing = Borrowing(
-            book_copy_id=book_copy.id,
-            member_id=member.id,
-        )
+        held = db.scalar(select(Reservation).where(Reservation.book_copy_id == book_copy.id,
+                           Reservation.status == "ready").with_for_update())
+        if held is not None and held.member_id != member.id:
+            raise HTTPException(status_code=409, detail="This copy is held for another member's reservation")
+        borrowing = Borrowing(book_copy_id=book_copy.id, member_id=member.id)
+        db.add(borrowing)
+        if held is not None:
+            held.status = "fulfilled"
+            held.fulfilled_at = now_utc()
+            held.book_copy_id = None
+        db.flush()
+        queue_email(db, f"borrow-{borrowing.id}", member.email,
+                    "Library book borrowed", f"Hello {member.full_name},\n\nYou borrowed copy #{book_copy.id}. Due: {borrowing.due_at.isoformat()}.\n")
 
         book_copy.status = "borrowed"
         db.add(borrowing)
 
         db.commit()
         db.refresh(borrowing)
-
-        return borrowing
+        if email_enabled():
+            background_tasks.add_task(deliver_queued_notifications)
+        return borrowing_with_fine(db, borrowing)
     except IntegrityError as exc:
         db.rollback()
 
@@ -230,7 +252,7 @@ def extend_due_date(
         db.commit()
         db.refresh(borrowing)
 
-        return borrowing
+        return borrowing_with_fine(db, borrowing)
 
     except Exception:
         db.rollback()
@@ -276,7 +298,7 @@ def list_borrowings(
         .limit(limit)
     )
 
-    return db.scalars(query).all()
+    return [borrowing_with_fine(db, b) for b in db.scalars(query).all()]
 
 
 # Return a borrowed book and assess any applicable fine
@@ -288,6 +310,7 @@ def return_book(
     borrowing_id: int,
     db: DatabaseSession,
     current_user: CurrentStaff,
+    background_tasks: BackgroundTasks,
 ):
     try:
         # Lock the borrowing first to serialize concurrent returns
@@ -310,7 +333,10 @@ def return_book(
                 detail="This book has already been returned",
             )
 
-        # Lock the physical copy before updating its inventory status.
+        # Lock title before copy to coordinate with reservation assignment.
+        initial_copy = db.get(BookCopy, borrowing.book_copy_id)
+        if initial_copy is not None:
+            db.scalar(select(Book).where(Book.id == initial_copy.book_id).with_for_update())
         book_copy = db.scalar(
             select(BookCopy)
             .where(BookCopy.id == borrowing.book_copy_id)
@@ -324,7 +350,10 @@ def return_book(
             )
 
         return_time = datetime.now(timezone.utc)
-        fine_amount = calculate_fine(borrowing.due_at, return_time)
+        member = db.get(Member, borrowing.member_id)
+        fine_rate = fine_rate_for_category(member.category)
+        fine_amount = calculate_fine(borrowing.due_at, return_time,
+                                     daily_rate=fine_rate, holidays=get_holiday_days(db))
 
         borrowing.returned_at = return_time
         book_copy.status = "available"
@@ -341,16 +370,21 @@ def return_book(
                     Fine(
                         borrowing_id=borrowing.id,
                         amount=fine_amount,
-                        daily_rate=DAILY_FINE_RATE,
+                        daily_rate=fine_rate,
                         status="unpaid",
                         assessed_at=return_time,
                     )
                 )
 
+        # If members are waiting, hold the newly returned copy for the oldest reservation.
+        allocate_book_availability(db, book_copy.book_id)
+        queue_email(db, f"return-{borrowing.id}", member.email,
+                    "Library book returned", f"Hello {member.full_name},\n\nCopy #{book_copy.id} was returned. Fine assessed: {fine_amount}.\n")
         db.commit()
         db.refresh(borrowing)
-
-        return borrowing
+        if email_enabled():
+            background_tasks.add_task(deliver_queued_notifications)
+        return borrowing_with_fine(db, borrowing)
 
     except Exception:
         db.rollback()

@@ -2,7 +2,7 @@
 "use strict";
 
 import { API_BASE_URL } from "./config.js";
-import { clearToken } from "./api.js";
+import { clearToken, saveTokens, getRefreshToken } from "./api.js";
 
 const loginScreen = document.getElementById("login-screen");
 const dashboardScreen = document.getElementById("dashboard-screen");
@@ -68,7 +68,7 @@ loginForm.addEventListener("submit", async (event) => {
             throw new Error("The server did not return an access token.");
         }
 
-        sessionStorage.setItem("access_token", data.access_token);
+        saveTokens(data);
 
         // app.js listens for this event to load application data.
         window.dispatchEvent(new Event("login-success"));
@@ -81,7 +81,16 @@ loginForm.addEventListener("submit", async (event) => {
     }
 });
 
-logoutButton.addEventListener("click", () => {
+logoutButton.addEventListener("click", async () => {
+    const refresh = getRefreshToken();
+    if (refresh) {
+        try {
+            await fetch(`${API_BASE_URL}/auth/logout`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refresh_token: refresh }),
+            });
+        } catch (error) { console.warn("Server logout failed; local session cleared", error); }
+    }
     clearToken();
     loginForm.reset();
     loginError.textContent = "";

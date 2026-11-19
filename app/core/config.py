@@ -9,6 +9,18 @@ class Settings(BaseSettings):
     secret_key: SecretStr
     database_url: str
     access_token_expire_minutes: int = Field(default=30, gt=0)
+    refresh_token_expire_days: int = Field(default=7, gt=0, le=90)
+    reservation_hold_hours: int = Field(default=48, gt=0, le=168)
+    student_daily_fine: int = Field(default=10, gt=0)
+    faculty_daily_fine: int = Field(default=5, gt=0)
+    library_timezone: str = "Asia/Kolkata"
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str = ""
+    smtp_password: SecretStr = SecretStr("")
+    smtp_from_email: str = ""
+    smtp_use_tls: bool = True
+    reminder_days_before: int = Field(default=1, ge=0, le=30)
 
     cors_origins: list[str] = Field(
         default_factory=lambda: [

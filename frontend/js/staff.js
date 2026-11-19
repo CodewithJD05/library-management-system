@@ -16,6 +16,7 @@ let currentPage = 0;
 let staffList = [];
 let dashboardRefreshCallback = null;
 let isLoading = false;
+let currentActor = null;
 
 // ---------- DOM elements ----------
 
@@ -121,6 +122,10 @@ function renderStaff() {
         const actionsCell = document.createElement("td");
         actionsCell.className = "table-actions";
 
+        const canManage = currentActor?.role === "super_admin" && staff.role !== "super_admin"
+            || currentActor?.role === "admin" && (staff.role === "librarian" || staff.id === currentActor.id);
+        const canChangeStatus = currentActor?.role === "super_admin" && staff.role !== "super_admin"
+            || currentActor?.role === "admin" && staff.role === "librarian";
         const editButton = document.createElement("button");
         editButton.type = "button";
         editButton.className = "secondary-button";
@@ -141,7 +146,17 @@ function renderStaff() {
             void toggleStaffStatus(staff, statusButton);
         });
 
-        actionsCell.append(editButton, statusButton);
+        if (canManage) actionsCell.appendChild(editButton);
+        if (canChangeStatus) {
+            actionsCell.appendChild(statusButton);
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.className = "secondary-button";
+            deleteButton.textContent = "Delete";
+            deleteButton.addEventListener("click", () => { void deleteStaff(staff, deleteButton); });
+            actionsCell.appendChild(deleteButton);
+        }
+        if (!canManage && !canChangeStatus) actionsCell.textContent = "Protected";
         row.appendChild(actionsCell);
         staffTableBody.appendChild(row);
     }
@@ -167,6 +182,10 @@ export async function loadStaff() {
     showTableMessage("Loading staff accounts…");
 
     try {
+        currentActor = window.currentStaff || await apiRequest("/auth/me");
+        const adminRoleOption = staffRoleInput.querySelector('option[value="admin"]');
+        if (adminRoleOption) adminRoleOption.hidden = currentActor.role !== "super_admin";
+        if (createStaffButton) createStaffButton.hidden = !["super_admin", "admin"].includes(currentActor.role);
         const staff = await apiRequest(
             `/staff/?skip=${currentPage * PAGE_SIZE}&limit=${PAGE_SIZE}`
         );
@@ -220,7 +239,8 @@ function openCreateDialog() {
     }
 
     staffForm.reset();
-
+    staffRoleInput.disabled = false;
+    staffRoleInput.value = "librarian";
     staffIdInput.value = "";
     staffPasswordInput.required = true;
     staffPasswordInput.placeholder = "";
@@ -243,6 +263,8 @@ function openEditDialog(staff) {
     staffNameInput.value = staff.full_name || "";
     staffEmailInput.value = staff.email || "";
     staffRoleInput.value = staff.role || "librarian";
+    staffRoleInput.disabled = currentActor?.role !== "super_admin";
+
 
     staffPasswordInput.value = "";
     staffPasswordInput.required = false;
@@ -272,7 +294,7 @@ async function saveStaff(event) {
     const payload = {
         full_name: staffNameInput.value.trim(),
         email: staffEmailInput.value.trim(),
-        role: staffRoleInput.value,
+        ...(staffRoleInput.disabled ? {} : { role: staffRoleInput.value }),
     };
 
     if (password) {
@@ -369,6 +391,18 @@ async function toggleStaffStatus(staff, button) {
     } finally {
         button.disabled = false;
     }
+}
+
+async function deleteStaff(staff, button) {
+    if (!window.confirm(`Permanently delete ${staff.full_name}'s staff account? This cannot be undone.`)) return;
+    button.disabled = true;
+    try {
+        await apiRequest(`/staff/${staff.id}`, { method: "DELETE" });
+        await loadStaff();
+        if (dashboardRefreshCallback) await dashboardRefreshCallback();
+    } catch (error) {
+        setMessage(staffMessage, error.message || "Could not delete staff.", "error");
+    } finally { button.disabled = false; }
 }
 
 // ---------- Dialog closing ----------

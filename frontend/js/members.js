@@ -56,7 +56,7 @@ export async function loadMembers() {
 
     membersState.loading = true;
     setMessage(membersMessage, "Loading members…");
-    makeEmptyRow(membersTableBody, 7, "Loading members…");
+    makeEmptyRow(membersTableBody, 8, "Loading members…");
 
     const query = new URLSearchParams({
         skip: String(membersState.skip),
@@ -96,7 +96,7 @@ export async function loadMembers() {
                 : "No members found."
         );
     } catch (error) {
-        makeEmptyRow(membersTableBody, 7, "Could not load members.");
+        makeEmptyRow(membersTableBody, 8, "Could not load members.");
         setMessage(membersMessage, error.message, "error");
         console.error("Loading members failed:", error);
     } finally {
@@ -108,7 +108,7 @@ function renderMembers(members) {
     membersTableBody.replaceChildren();
 
     if (members.length === 0) {
-        makeEmptyRow(membersTableBody, 7, "No members found.");
+        makeEmptyRow(membersTableBody, 8, "No members found.");
         return;
     }
 
@@ -128,6 +128,7 @@ function renderMembers(members) {
 
         row.appendChild(makeCell(member.email));
         row.appendChild(makeCell(member.phone || "—"));
+        row.appendChild(makeCell(member.category === "faculty" ? "Faculty" : "Student"));
 
         const statusCell = document.createElement("td");
         statusCell.appendChild(
@@ -242,6 +243,7 @@ function openMemberDialog(member = null) {
         memberForm.elements.full_name.value = member.full_name || "";
         memberForm.elements.email.value = member.email || "";
         memberForm.elements.phone.value = member.phone || "";
+        memberForm.elements.category.value = member.category || "student";
     }
 
     memberDialog.showModal();
@@ -264,6 +266,7 @@ memberForm.addEventListener("submit", async (event) => {
         full_name: String(formData.get("full_name") || "").trim(),
         email: String(formData.get("email") || "").trim(),
         phone: String(formData.get("phone") || "").trim() || null,
+        category: String(formData.get("category") || "student"),
     };
 
     const isEditing = membersState.editingMemberId !== null;
