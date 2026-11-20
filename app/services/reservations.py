@@ -42,9 +42,27 @@ def allocate_waiting_reservation(db: Session, copy: BookCopy, now: datetime | No
     next_up.expires_at = now + timedelta(hours=settings.reservation_hold_hours)
     member = db.get(Member, next_up.member_id)
     if member is not None:
-        queue_email(db, f'reservation-ready-{next_up.id}', member.email,
-                    'Your reserved library book is available',
-                    f'Hello {member.full_name},\n\nA copy of book #{next_up.book_id} is now reserved for you. Collect copy #{copy.id} before {next_up.expires_at.isoformat()}.\n')
+        queue_email(
+            db,
+            f"reservation-ready-{next_up.id}",
+            member.email,
+            "Library Management | Your Reserved Book Is Ready",
+            (
+                f"Dear {member.full_name},\n\n"
+                "Good news! A copy of your reserved book "
+                "is now available for collection.\n\n"
+                "RESERVATION DETAILS\n"
+                f"Reservation ID: {next_up.id}\n"
+                f"Book ID: {next_up.book_id}\n"
+                f"Copy ID: {copy.id}\n"
+                f"Collect Before: {next_up.expires_at:%d %B %Y, %I:%M %p} UTC\n\n"
+                "Please collect your reserved book before "
+                "the deadline. Otherwise, your reservation "
+                "may expire.\n\n"
+                "Best regards,\n"
+                "Library Management Team"
+            ),
+        )
     return next_up
 
 

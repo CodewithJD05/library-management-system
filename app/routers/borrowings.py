@@ -116,8 +116,25 @@ def borrow_book(
             held.fulfilled_at = now_utc()
             held.book_copy_id = None
         db.flush()
-        queue_email(db, f"borrow-{borrowing.id}", member.email,
-                    "Library book borrowed", f"Hello {member.full_name},\n\nYou borrowed copy #{book_copy.id}. Due: {borrowing.due_at.isoformat()}.\n")
+        queue_email(
+            db,
+            f"borrow-{borrowing.id}",
+            member.email,
+            "Library Management | Book Issued Successfully",
+            (
+                f"Dear {member.full_name},\n\n"
+                "Your book has been issued successfully.\n\n"
+                "BORROWING DETAILS\n"
+                f"Borrowing ID: {borrowing.id}\n"
+                f"Book Copy ID: {book_copy.id}\n"
+                f"Due Date: {borrowing.due_at:%d %B %Y} (UTC)\n\n"
+                "Please return the book before the due date "
+                "to avoid overdue charges.\n\n"
+                "Thank you for using our library services.\n\n"
+                "Best regards,\n"
+                "Library Management Team"
+            ),
+        )
 
         book_copy.status = "borrowed"
         db.add(borrowing)
@@ -378,8 +395,25 @@ def return_book(
 
         # If members are waiting, hold the newly returned copy for the oldest reservation.
         allocate_book_availability(db, book_copy.book_id)
-        queue_email(db, f"return-{borrowing.id}", member.email,
-                    "Library book returned", f"Hello {member.full_name},\n\nCopy #{book_copy.id} was returned. Fine assessed: {fine_amount}.\n")
+        queue_email(
+            db,
+            f"return-{borrowing.id}",
+            member.email,
+            "Library Management | Return Confirmation",
+            (
+                f"Dear {member.full_name},\n\n"
+                "Your book has been returned successfully.\n\n"
+                "RETURN DETAILS\n"
+                f"Borrowing ID: {borrowing.id}\n"
+                f"Book Copy ID: {book_copy.id}\n"
+                f"Fine Assessed: ₹{fine_amount:.2f}\n\n"
+                "If an overdue fine has been assessed, "
+                "please clear the outstanding amount.\n\n"
+                "Thank you for returning your book.\n\n"
+                "Best regards,\n"
+                "Library Management Team"
+            ),
+        )
         db.commit()
         db.refresh(borrowing)
         if email_enabled():

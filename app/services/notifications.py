@@ -34,8 +34,26 @@ def queue_due_reminders(db: Session, now: datetime | None = None) -> int:
         key = f'due-reminder-{borrowing.id}-{due_time.isoformat()}'
         if db.scalar(select(EmailNotification.id).where(EmailNotification.event_key == key)):
             continue
-        queue_email(db, key, member.email, 'Library book due soon',
-                    f'Hello {member.full_name},\n\nYour borrowing #{borrowing.id} is due on {due_time.isoformat()}. Please return or renew it before the due date.\n')
+        queue_email(
+                db,
+                key,
+                member.email,
+                "Library Management | Book Return Reminder",
+                (
+                    f"Dear {member.full_name},\n\n"
+                    "This is a friendly reminder that your "
+                    "borrowed book is approaching its due date.\n\n"
+                    "BORROWING DETAILS\n"
+                    f"Borrowing ID: {borrowing.id}\n"
+                    f"Due Date: {due_time:%d %B %Y} (UTC)\n\n"
+                    "Please return the book on or before the "
+                    "due date to avoid overdue fines.\n\n"
+                    "If you've already returned the book, "
+                    "please disregard this reminder.\n\n"
+                    "Best regards,\n"
+                    "Library Management Team"
+                ),
+            )
         queued += 1
     db.commit()
     return queued
