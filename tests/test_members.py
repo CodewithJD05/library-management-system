@@ -10,8 +10,8 @@ def test_create_member(client):
     response = client.post(
         "/members/",
         json={
-            "full_name": "Jay Jadav",
-            "email": "jay.test@example.com",
+            "full_name": "michelle jones",
+            "email": "michelle.jones@example.com",
             "phone": "9876543210",
         },
     )
@@ -19,15 +19,15 @@ def test_create_member(client):
     assert response.status_code == 201
 
     data = response.json()
-    assert data["full_name"] == "Jay Jadav"
-    assert data["email"] == "jay.test@example.com"
+    assert data["full_name"] == "michelle jones"
+    assert data["email"] == "michelle.jones@example.com"
     assert data["is_active"] is True
     assert data["id"] is not None
 
 
 def test_duplicate_email_returns_conflict(client):
     member_data = {
-        "full_name": "Jay Jadav",
+        "full_name": "michelle jones",
         "email": "duplicate@example.com",
     }
 
@@ -114,20 +114,20 @@ def test_create_member_trims_name(client):
     response = client.post(
         "/members/",
         json={
-            "full_name": "  Jay Jadav  ",
+            "full_name": "  michelle jones  ",
             "email": "trimmed.name@example.com",
         },
     )
 
     assert response.status_code == 201
-    assert response.json()["full_name"] == "Jay Jadav"
+    assert response.json()["full_name"] == "michelle jones"
 
 
 def test_update_member_rejects_whitespace_only_name(client):
     create_response = client.post(
         "/members/",
         json={
-            "full_name": "Jay Jadav",
+            "full_name": "michelle jones",
             "email": "update.name@example.com",
         },
     )
