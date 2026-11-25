@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -19,24 +18,12 @@
             <p>Sign in with your library staff account.</p>
 
             <label for="login-email">Email address</label>
-            <input
-                id="login-email"
-                name="username"
-                type="email"
-                placeholder="staff@example.com"
-                autocomplete="username"
-                required
-            >
+            <input id="login-email" name="username" type="email" placeholder="staff@example.com" autocomplete="username"
+                required>
 
             <label for="login-password">Password</label>
-            <input
-                id="login-password"
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                autocomplete="current-password"
-                required
-            >
+            <input id="login-password" name="password" type="password" placeholder="Enter your password"
+                autocomplete="current-password" required>
 
             <p id="login-error" class="login-error" role="alert"></p>
             <button id="login-button" type="submit">Sign in</button>
@@ -325,12 +312,7 @@
                         </div>
 
                         <form id="book-search-form" class="search-form">
-                            <input
-                                id="book-search"
-                                type="search"
-                                placeholder="Search books…"
-                                aria-label="Search books"
-                            >
+                            <input id="book-search" type="search" placeholder="Search books…" aria-label="Search books">
                             <button type="submit" class="secondary-button">Search</button>
                             <button id="clear-search" type="button" class="secondary-button">
                                 Clear
@@ -425,12 +407,8 @@
                         </div>
 
                         <form id="member-search-form" class="search-form">
-                            <input
-                                id="member-search"
-                                type="search"
-                                placeholder="Search members…"
-                                aria-label="Search members"
-                            >
+                            <input id="member-search" type="search" placeholder="Search members…"
+                                aria-label="Search members">
                             <button type="submit" class="secondary-button">Search</button>
                             <button id="clear-member-search" type="button" class="secondary-button">
                                 Clear
@@ -594,12 +572,8 @@
                             <h2>Issue a book</h2>
                         </div>
 
-                        <button
-                            type="button"
-                            class="icon-button"
-                            data-close-dialog="issue-book-dialog"
-                            aria-label="Close"
-                        >
+                        <button type="button" class="icon-button" data-close-dialog="issue-book-dialog"
+                            aria-label="Close">
                             ×
                         </button>
                     </div>
@@ -756,8 +730,18 @@
 
             <!-- Reservations and holds -->
             <section id="reservations-page" class="app-page" hidden>
-                <header class="topbar"><div><p class="eyebrow">WAITING LIST</p><h1>Book Reservations</h1></div></header>
-                <section class="page-intro"><div><h2>Reserve unavailable books</h2><p>Any active member may join the queue when all copies are borrowed or held.</p></div></section>
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">WAITING LIST</p>
+                        <h1>Book Reservations</h1>
+                    </div>
+                </header>
+                <section class="page-intro">
+                    <div>
+                        <h2>Reserve unavailable books</h2>
+                        <p>Any active member may join the queue when all copies are borrowed or held.</p>
+                    </div>
+                </section>
                 <section class="panel catalogue-panel" style="padding:24px;margin-bottom:24px">
                     <h2>Add reservation</h2>
                     <form id="reservation-form" class="inline-form" style="flex-wrap:wrap;gap:12px;margin-top:12px">
@@ -768,14 +752,44 @@
                     <p id="reservation-message" class="page-message" role="status"></p>
                 </section>
                 <section class="panel catalogue-panel" style="padding:24px">
-                    <div class="catalogue-toolbar"><h2>Reservation queue</h2><button id="refresh-reservations" class="secondary-button" type="button">Refresh</button></div>
-                    <div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Book ID</th><th>Member ID</th><th>Copy</th><th>Status</th><th>Hold expires</th><th>Action</th></tr></thead><tbody id="reservations-body"></tbody></table></div>
+                    <div class="catalogue-toolbar">
+                        <h2>Reservation queue</h2><button id="refresh-reservations" class="secondary-button"
+                            type="button">Refresh</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Book ID</th>
+                                    <th>Member ID</th>
+                                    <th>Copy</th>
+                                    <th>Status</th>
+                                    <th>Hold expires</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reservations-body"></tbody>
+                        </table>
+                    </div>
                 </section>
             </section>
             <!-- Configurable fine holidays -->
             <section id="holidays-page" class="app-page" hidden>
-                <header class="topbar"><div><p class="eyebrow">FINE POLICY</p><h1>Holiday Calendar</h1></div></header>
-                <section class="page-intro"><div><h2>Days excluded from overdue fines</h2><p>Students and faculty have separate configurable fine rates. Weekends count unless added here.</p><p id="fine-policy-summary" class="stat-note"></p></div></section>
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">FINE POLICY</p>
+                        <h1>Holiday Calendar</h1>
+                    </div>
+                </header>
+                <section class="page-intro">
+                    <div>
+                        <h2>Days excluded from overdue fines</h2>
+                        <p>Students and faculty have separate configurable fine rates. Weekends count unless added here.
+                        </p>
+                        <p id="fine-policy-summary" class="stat-note"></p>
+                    </div>
+                </section>
                 <section class="panel catalogue-panel" style="padding:24px;margin-bottom:24px">
                     <form id="holiday-form" class="inline-form" style="flex-wrap:wrap;gap:12px">
                         <label>Date <input type="date" name="day" required></label>
@@ -785,28 +799,88 @@
                     <p id="holiday-message" class="page-message" role="status"></p>
                 </section>
                 <section class="panel catalogue-panel" style="padding:24px">
-                    <div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Holiday</th><th>Action</th></tr></thead><tbody id="holidays-body"></tbody></table></div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Holiday</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="holidays-body"></tbody>
+                        </table>
+                    </div>
                 </section>
             </section>
             <!-- Session management -->
             <section id="sessions-page" class="app-page" hidden>
-                <header class="topbar"><div><p class="eyebrow">SECURITY</p><h1>My Sessions</h1></div></header>
-                <section class="page-intro"><div><h2>Manage signed-in sessions</h2><p>Revoke a session or sign out on all devices.</p></div>
-                    <div class="page-actions"><button id="logout-all-sessions" class="secondary-button" type="button">Sign out everywhere</button><button id="refresh-sessions" class="secondary-button" type="button">Refresh</button></div>
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">SECURITY</p>
+                        <h1>My Sessions</h1>
+                    </div>
+                </header>
+                <section class="page-intro">
+                    <div>
+                        <h2>Manage signed-in sessions</h2>
+                        <p>Revoke a session or sign out on all devices.</p>
+                    </div>
+                    <div class="page-actions"><button id="logout-all-sessions" class="secondary-button"
+                            type="button">Sign out everywhere</button><button id="refresh-sessions"
+                            class="secondary-button" type="button">Refresh</button></div>
                 </section>
                 <section class="panel catalogue-panel" style="padding:24px">
                     <p id="sessions-message" class="page-message" role="status"></p>
-                    <div class="table-wrap"><table class="data-table"><thead><tr><th>Session ID</th><th>Created</th><th>Expiration</th><th>Revoked</th><th>Action</th></tr></thead><tbody id="sessions-body"></tbody></table></div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Session ID</th>
+                                    <th>Created</th>
+                                    <th>Expiration</th>
+                                    <th>Revoked</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sessions-body"></tbody>
+                        </table>
+                    </div>
                 </section>
             </section>
             <!-- Email queue management -->
             <section id="notifications-page" class="app-page" hidden>
-                <header class="topbar"><div><p class="eyebrow">EMAIL DELIVERY</p><h1>Notifications</h1></div></header>
-                <section class="page-intro"><div><h2>Notification delivery log</h2><p>Borrowing receipts, due-date reminders and reservation alerts.</p></div>
-                    <div class="page-actions"><button id="send-notifications" class="primary-button" type="button">Dispatch pending emails</button><button id="refresh-notifications" class="secondary-button" type="button">Refresh</button></div></section>
+                <header class="topbar">
+                    <div>
+                        <p class="eyebrow">EMAIL DELIVERY</p>
+                        <h1>Notifications</h1>
+                    </div>
+                </header>
+                <section class="page-intro">
+                    <div>
+                        <h2>Notification delivery log</h2>
+                        <p>Borrowing receipts, due-date reminders and reservation alerts.</p>
+                    </div>
+                    <div class="page-actions"><button id="send-notifications" class="primary-button"
+                            type="button">Dispatch pending emails</button><button id="refresh-notifications"
+                            class="secondary-button" type="button">Refresh</button></div>
+                </section>
                 <section class="panel catalogue-panel" style="padding:24px">
                     <p id="notifications-message" class="page-message" role="status"></p>
-                    <div class="table-wrap"><table class="data-table"><thead><tr><th>Event</th><th>Recipient</th><th>Subject</th><th>Status</th><th>Attempts</th></tr></thead><tbody id="notifications-body"></tbody></table></div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Recipient</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Attempts</th>
+                                </tr>
+                            </thead>
+                            <tbody id="notifications-body"></tbody>
+                        </table>
+                    </div>
                 </section>
             </section>
             <!-- Staff management page -->
@@ -920,33 +994,14 @@
             <input type="hidden" id="staff-id">
 
             <label for="staff-name">Full name *</label>
-            <input
-                type="text"
-                id="staff-name"
-                minlength="2"
-                maxlength="150"
-                autocomplete="name"
-                required
-            >
+            <input type="text" id="staff-name" minlength="2" maxlength="150" autocomplete="name" required>
 
             <label for="staff-email">Email address *</label>
-            <input
-                type="email"
-                id="staff-email"
-                maxlength="255"
-                autocomplete="email"
-                required
-            >
+            <input type="email" id="staff-email" maxlength="255" autocomplete="email" required>
 
             <label for="staff-password">Password *</label>
-            <input
-                type="password"
-                id="staff-password"
-                minlength="12"
-                maxlength="128"
-                autocomplete="new-password"
-                required
-            >
+            <input type="password" id="staff-password" minlength="12" maxlength="128" autocomplete="new-password"
+                required>
 
             <small>
                 Use at least 12 characters. When editing, leave blank to keep
@@ -981,12 +1036,7 @@
                     <h2>Extend due date</h2>
                 </div>
 
-                <button
-                    type="button"
-                    class="icon-button"
-                    data-close-dialog="due-date-dialog"
-                    aria-label="Close"
-                >
+                <button type="button" class="icon-button" data-close-dialog="due-date-dialog" aria-label="Close">
                     ×
                 </button>
             </div>
@@ -1018,12 +1068,7 @@
                     <h2 id="member-dialog-title">Add a member</h2>
                 </div>
 
-                <button
-                    type="button"
-                    class="icon-button"
-                    data-close-dialog="member-dialog"
-                    aria-label="Close"
-                >
+                <button type="button" class="icon-button" data-close-dialog="member-dialog" aria-label="Close">
                     ×
                 </button>
             </div>
@@ -1066,12 +1111,7 @@
                     <p id="member-history-subtitle" class="dialog-subtitle"></p>
                 </div>
 
-                <button
-                    type="button"
-                    class="icon-button"
-                    data-close-dialog="member-history-dialog"
-                    aria-label="Close"
-                >
+                <button type="button" class="icon-button" data-close-dialog="member-history-dialog" aria-label="Close">
                     ×
                 </button>
             </div>
@@ -1109,12 +1149,7 @@
                     <h2>Add a book</h2>
                 </div>
 
-                <button
-                    type="button"
-                    class="icon-button"
-                    data-close-dialog="add-book-dialog"
-                    aria-label="Close"
-                >
+                <button type="button" class="icon-button" data-close-dialog="add-book-dialog" aria-label="Close">
                     ×
                 </button>
             </div>
@@ -1126,22 +1161,11 @@
             <input id="new-book-isbn" name="isbn" maxlength="20" required>
 
             <label for="new-book-year">Publication year</label>
-            <input
-                id="new-book-year"
-                name="published_year"
-                type="number"
-                min="1"
-                max="9999"
-                placeholder="e.g. 2024"
-            >
+            <input id="new-book-year" name="published_year" type="number" min="1" max="9999" placeholder="e.g. 2024">
 
             <label for="new-book-description">Description</label>
-            <textarea
-                id="new-book-description"
-                name="description"
-                rows="3"
-                placeholder="Optional book description"
-            ></textarea>
+            <textarea id="new-book-description" name="description" rows="3"
+                placeholder="Optional book description"></textarea>
 
             <p id="add-book-error" class="form-error" role="alert"></p>
 
@@ -1176,33 +1200,13 @@
             <p id="edit-book-error" class="form-error" role="alert"></p>
 
             <label for="edit-book-title">Book title *</label>
-            <input
-                id="edit-book-title"
-                name="title"
-                type="text"
-                maxlength="200"
-                autocomplete="off"
-                required
-            >
+            <input id="edit-book-title" name="title" type="text" maxlength="200" autocomplete="off" required>
 
             <label for="edit-book-isbn">ISBN *</label>
-            <input
-                id="edit-book-isbn"
-                name="isbn"
-                type="text"
-                maxlength="20"
-                autocomplete="off"
-                required
-            >
+            <input id="edit-book-isbn" name="isbn" type="text" maxlength="20" autocomplete="off" required>
 
             <label for="edit-book-year">Published year</label>
-            <input
-                id="edit-book-year"
-                name="published_year"
-                type="number"
-                min="1"
-                max="9999"
-            >
+            <input id="edit-book-year" name="published_year" type="number" min="1" max="9999">
 
             <label for="edit-book-description">Description</label>
             <textarea id="edit-book-description" name="description" rows="4"></textarea>
@@ -1228,12 +1232,7 @@
                     <p id="copies-dialog-subtitle" class="dialog-subtitle"></p>
                 </div>
 
-                <button
-                    type="button"
-                    class="icon-button"
-                    data-close-dialog="copies-dialog"
-                    aria-label="Close"
-                >
+                <button type="button" class="icon-button" data-close-dialog="copies-dialog" aria-label="Close">
                     &times;
                 </button>
             </div>
@@ -1242,13 +1241,7 @@
                 <label for="new-copy-barcode">New copy barcode</label>
 
                 <div class="inline-form">
-                    <input
-                        id="new-copy-barcode"
-                        name="barcode"
-                        maxlength="50"
-                        placeholder="e.g. LIB-BOOK-001"
-                        required
-                    >
+                    <input id="new-copy-barcode" name="barcode" maxlength="50" placeholder="e.g. LIB-BOOK-001" required>
 
                     <button id="add-copy-button" class="primary-button" type="submit">
                         Add copy
