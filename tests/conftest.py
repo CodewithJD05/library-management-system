@@ -11,7 +11,7 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.models.staff_user import StaffUser
-
+from app.core.config import settings
 
 TEST_DATABASE_URL = "sqlite://"
 
@@ -28,7 +28,12 @@ TestingSessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
+@pytest.fixture(autouse=True)
+def disable_smtp(monkeypatch):
+    monkeypatch.setattr(settings, "smtp_host", "")
+    monkeypatch.setattr(settings, "smtp_from_email", "")
 
+    
 @pytest.fixture()
 def db_session():
     Base.metadata.create_all(bind=engine)
